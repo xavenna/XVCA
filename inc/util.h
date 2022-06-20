@@ -6,5 +6,8 @@
 //void sSplit(std::string, std::vector<std::string>&, std::string);
 bool isLetter(char);
 bool isNum(char);
+bool confirm(std::string);
+std::string padTo2Bytes(int);
+void padStringToSize(std::string&, size_t);
 
 #endif

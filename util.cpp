@@ -1,4 +1,6 @@
 #include "util.h"
+#include <iostream>
+#include <string>
 
 /*
 void sSplit(std::string inputString, std::vector<std::string>& wordList, std::string key) { //splits a string into a deque
@@ -22,4 +24,29 @@ bool isLetter(char x) {
 }
 bool isNum(char x) {
   return (x >= '0' && x <= '9');
+}
+bool confirm(std::string prompt) {
+  std::string input;
+  std::cout << prompt << "\n> ";
+  std::cin >> input;
+  if(input.size() == 0)
+    return false;
+  if(input[0] == 'y' || input[0] == 'Y')
+    return true;
+  return false;
+}
+std::string padTo2Bytes(int currentSector) {
+  if(currentSector > 65535) {
+    throw -1; //error: invalid sector
+  }
+  std::string output;
+  output += (char) (currentSector & 0xff);
+  output += (char) ((currentSector & 0xff00) >> 8);
+  return output;
+}
+
+void padStringToSize(std::string& string, size_t size) {
+  std::string pad('\0', size-string.size());
+  string += pad;
+  return;
 }
