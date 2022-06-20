@@ -5,5 +5,6 @@
 
 //void sSplit(std::string, std::vector<std::string>&, std::string);
 bool isLetter(char);
+bool isNum(char);
 
 #endif
