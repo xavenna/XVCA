@@ -14,7 +14,7 @@ HEADER = $(wildcard include/*.h)
 all: asm xvca
 
 ASMEXE = assembler.exe
-ASMOBJS = assembler.o util.o
+ASMOBJS = assembler.o util.o assembler-util.o
 
 XVEXE = xvca.exe
 XVOBJS = xvca.o util.o
@@ -26,7 +26,7 @@ asm: $(ASMEXE)
 	$(CC) -MM $(CFLAGS) $(DBGCFLAGS) $(INCD) -c $< > $@.$$$$; \
 	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
 	rm -f $@.$$$$
-include $(sources:.c=.d)
+include $(sources:.cpp=.d)
 
 $(ASMEXE): $(ASMOBJS)
 	$(CC) -o assembler.exe $^
@@ -43,7 +43,7 @@ release: $(RELEXE)
 	$(CC) -MM $(CFLAGS) $(RELCFLAGS) $(INCD) -c $< > $@.$$$$; \
 	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
 	rm -f $@.$$$$
-include $(sources:.c=.d)
+include $(sources:.cpp=.d)
 
 $(XVEXE) : $(XVOBJS)
 	$(CC) -o $(XVEXE) $^

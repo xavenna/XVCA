@@ -20,3 +20,6 @@ void sSplit(std::string inputString, std::vector<std::string>& wordList, std::st
 bool isLetter(char x) {
   return ((x >= 'a' && x <= 'z') || (x >= 'A' && x <= 'Z'));
 }
+bool isNum(char x) {
+  return (x >= '0' && x <= '9');
+}

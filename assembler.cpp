@@ -198,7 +198,6 @@ bool assemble(std::string filename) {
 	  //std::cout << arg << '\n';
 	  if(arg > 255 || arg < 0) {
 	    std::cout << "Error: argument is not an unsigned 8 bit integer\n";
-	    //error: argument is not an unsigned 8-bit integer
 	  }
 	  else {
 	    machineCode.push_back(arg);
@@ -210,7 +209,87 @@ bool assemble(std::string filename) {
 	  }
 	}
 	catch (...) {
-	  //error: argument could not be parsed as a number
+	  std::cout << "Error: argument could not be parsed as a number";
+	}
+      }
+    }
+    else if(instName == "MVMA") {
+      machineCode.push_back('\x0a');
+      if(lines[i].size() < 6) {
+	//error: missing argument
+      }
+      else {
+	//check if argument is a valid 8-bit value
+	try {
+	  int arg = rewriteNum(lines[i].substr(5, lines[i].find(" ", 6)));
+	  if(arg > 0xffff || arg < 0) {
+	    std::cout << "Error: argument is not an unsigned 16 bit integer\n";
+	  }
+	  else {
+	    machineCode.push_back((arg & 0xff00) >> 8);
+	    machineCode.push_back(arg & 0x00ff);
+	  }
+	}
+	catch (int e) {
+	  if(e == -1) {
+	    //error: ...
+	  }
+	}
+	catch (...) {
+	  std::cout << "Error: argument could not be parsed as a number";
+	}
+      }
+    }
+    else if(instName == "MVMX") {
+      machineCode.push_back('\x0b');
+      if(lines[i].size() < 6) {
+	//error: missing argument
+      }
+      else {
+	//check if argument is a valid 8-bit value
+	try {
+	  int arg = rewriteNum(lines[i].substr(5, lines[i].find(" ", 6)));
+	  if(arg > 0xffff || arg < 0) {
+	    std::cout << "Error: argument is not an unsigned 16 bit integer\n";
+	  }
+	  else {
+	    machineCode.push_back((arg & 0xff00) >> 8);
+	    machineCode.push_back(arg & 0x00ff);
+	  }
+	}
+	catch (int e) {
+	  if(e == -1) {
+	    //error: ...
+	  }
+	}
+	catch (...) {
+	  std::cout << "Error: argument could not be parsed as a number";
+	}
+      }
+    }
+    else if(instName == "MVMY") {
+      machineCode.push_back('\x0c');
+      if(lines[i].size() < 6) {
+	//error: missing argument
+      }
+      else {
+	//check if argument is a valid 8-bit value
+	try {
+	  int arg = rewriteNum(lines[i].substr(5, lines[i].find(" ", 6)));
+	  if(arg > 0xffff || arg < 0) {
+	    std::cout << "Error: argument is not an unsigned 16 bit integer\n";
+	  }
+	  else {
+	    machineCode.push_back((arg & 0xff00) >> 8);
+	    machineCode.push_back(arg & 0x00ff);
+	  }
+	}
+	catch (int e) {
+	  if(e == -1) {
+	    //error: ...
+	  }
+	}
+	catch (...) {
 	  std::cout << "Error: argument could not be parsed as a number";
 	}
       }
