@@ -50,6 +50,7 @@ std::string padTo2Bytes(int currentSector) {
   string += pad;
   return;
   }*/
+//this overload was removed because it is indistinguishable from the other one and g++ doesn't like that
 
 std::string padStringToSize(std::string string, size_t size) {
   std::string pad(size-string.size(), '\0');

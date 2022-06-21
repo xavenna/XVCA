@@ -10,7 +10,6 @@ int rewriteNum(std::string n) {
   }
   else {
     //number is decimal
-    //std::cout << n << ',' << std::stoi(n) << '\n';
     return std::stoi (n);
   }
   throw -1;

@@ -2,6 +2,7 @@
 #include <filesystem>
 #include <iostream>
 #include <cmath>
+#include <cstring>
 #include "drive.h"
 #include "util.h"
 #include "file-utils.h"
@@ -12,7 +13,6 @@ bool packFolderToDrive(std::string folderName, std::string driveName) {
   if(fileExists(driveName) && !confirm("This file already exists. Are you sure you want to overwrite it?")) {
     return false;
   }
-  std::ifstream get;
   std::ofstream drive(driveName, std::ios::binary | std::ios::trunc);
   if(!drive.is_open()) {
     std::cout << "Error: file couldn't be opened.\n";
@@ -29,8 +29,10 @@ bool packFolderToDrive(std::string folderName, std::string driveName) {
   
   int currentSector = 2;
   std::string temp;
+  std::string ftemp;
   for (const auto & entry : fs::directory_iterator(fs::current_path() / folderName)) {
     temp = entry.path().filename().string();
+    ftemp = entry.path().string();
     //temp is the file to be packed.
     //determine file size
     long size = fs::file_size(entry.path());
@@ -42,17 +44,12 @@ bool packFolderToDrive(std::string folderName, std::string driveName) {
     currentSector += sectors;
     fileTable += padTo2Bytes(currentSector-1); //this won't work for empty files, make sure this doesn't break things
 
-    get.open(temp, std::ios::binary);
-    std::filebuf* pbuf = get.rdbuf();
-    char* buffer=new char[size];
-    pbuf->sgetn(buffer, size);
-    get.close();
+    std::string buffer;
+    loadContentsOfFileToString(ftemp, buffer);
 
     //pad buffer 
-    std::string fileContent(buffer);
     
-    driveBody += padStringToSize(fileContent, sectors * 1024);
-    delete[] buffer;
+    driveBody += padStringToSize(buffer, sectors * 1024);
   }
   //write filetable to file
   fileTable = padStringToSize(fileTable, 1024); //pad filetable (eventually add size check)
