@@ -7,13 +7,14 @@
 /* This is the XVCA Drive manager
  *  Eventually, this will be able to pack data into a xvca drive
 
- *  Functions:
- *   -p : pack. This will pack files from a specified folder into a drive. 4 arguments
+ *  Functions:  (those marked with a * are important)
+ *  *-p : Packs files from a specified folder into a drive. 4 arguments
  *   -a : add. This will attempt to add a file to a drive. 4 arguments
  *   -l : list. This will list all files contained in a drive. 3 arguments 
  *   -h : help. This will display a help message. 2 arguments
  *   -v : version. This will display version information. 2 arguments
- *   -b : boot. This will add a specified file to the boot sector of drive. 4 arguments
+ *  *-b : boot. This will add a specified file to the boot sector of drive. 4 arguments
+ *   -u : unpack. This will attempt to extract all files from a drive. 4 arguments
  */
 int main(int argc, char** argv) {
   if(argc == 1) {
@@ -27,7 +28,7 @@ int main(int argc, char** argv) {
       std::cout << "Useful Help Message\n";
     }
     else {
-      std::cout << "Error: '" << arg << "' is not a valid XVCA drive filename. Files should have the extension .xdr\n";
+      std::cout << "Error: Unknown command.\n";
     }
   }
   else if(argc == 3) {
@@ -47,6 +48,22 @@ int main(int argc, char** argv) {
       if(fileExists(arg2) && isValidDriveName(arg3)) {
 	packFolderToDrive(arg2, arg3);
       }
+    }
+    else if(arg1 == "-a") {
+      //add file to existing drive.
+      //Usage: drivemgr -a <drive> <file>
+      std::cout << "Error: This functionality doesn't exist yet.\n";
+    }
+    else if(arg1 == "-b") {
+      //add file to boot sector of existing drive.
+      //Usage: drivemgr -b <drive> <file>
+      if(fileExists(arg2) && fileExists(arg3) && isValidDriveName(arg2)) {
+	addFileToBootSector(arg2, arg3);
+      }
+      //std::cout << "Error: This functionality doesn't exist yet.\n";
+    }
+    else {
+      std::cout << "Error: invalid command.\n";
     }
   }
   

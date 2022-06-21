@@ -61,3 +61,38 @@ bool packFolderToDrive(std::string folderName, std::string driveName) {
 
   return true;
 }
+
+bool addFileToBootSector(std::string driveName, std::string bootFileName) {
+  //check if boot sector is empty
+  std::fstream driveAccess;
+  std::ifstream fileAccess(bootFileName, std::ios::binary);
+  char buffer[1024];
+  std::string emptySector(1024, '\0');
+  std::string newDrive;
+  driveAccess.open(driveName, std::ios::in | std::ios::binary);
+  driveAccess.read(buffer, 1024);
+
+  if(emptySector != buffer && !confirm("The boot sector is not empty. Are you sure you want to overwrite it?")) {
+    return false;
+  }
+
+  //write first 1 KiB of bootFileName to newDrive
+  fileAccess.read(buffer, 1024);
+  newDrive += padStringToSize(buffer, 1024);
+
+  //now get the rest of the file into newDrive
+  size_t fileSize = fs::file_size(fs::current_path() / driveName);
+  std::cout << "size of '" << (fs::current_path() / driveName).string() << "' is " << fileSize << '\n';
+  size_t remainingSize = fileSize - 1024;
+  char* newBuffer = new char[remainingSize];
+  driveAccess.read(newBuffer, remainingSize);
+  std::cout << remainingSize << '\n' << newBuffer << '\n';
+  driveAccess.close();
+  driveAccess.open(driveName, std::ios::out | std::ios::trunc | std::ios::binary);
+  driveAccess.write(newDrive.data(), newDrive.size());
+  driveAccess.write(newBuffer, remainingSize);  //this has to not pass through a std::string because it contains null characters and the string copy doesn't like that
+  return true;
+} 
+
+
+

@@ -77,4 +77,4 @@ $(DREXE) : $(DROBJS)
 remake: clean all
 
 clean:
-	rm -f $(RELEXE) $(RELOBJS) $(DBGEXE) $(DBGOBJS)
+	rm -f $(XVEXE) $(XVOBJS) $(ASMEXE) $(ASMOBJS) $(DREXE) $(DROBJS)
