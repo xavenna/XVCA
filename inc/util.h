@@ -8,6 +8,7 @@ bool isLetter(char);
 bool isNum(char);
 bool confirm(std::string);
 std::string padTo2Bytes(int);
-void padStringToSize(std::string&, size_t);
+//void padStringToSize(std::string&, size_t);
+std::string padStringToSize(std::string, size_t);
 
 #endif

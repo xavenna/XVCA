@@ -40,13 +40,18 @@ std::string padTo2Bytes(int currentSector) {
     throw -1; //error: invalid sector
   }
   std::string output;
-  output += (char) (currentSector & 0xff);
   output += (char) ((currentSector & 0xff00) >> 8);
+  output += (char) (currentSector & 0xff);
   return output;
 }
 
-void padStringToSize(std::string& string, size_t size) {
-  std::string pad('\0', size-string.size());
+/*void padStringToSize(std::string& string, size_t size) {
+  std::string pad(size-string.size(), '\0');
   string += pad;
   return;
+  }*/
+
+std::string padStringToSize(std::string string, size_t size) {
+  std::string pad(size-string.size(), '\0');
+  return string += pad;
 }
