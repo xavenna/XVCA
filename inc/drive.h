@@ -3,6 +3,7 @@
 
 bool packFolderToDrive(std::string, std::string);
 bool addFileToBootSector(std::string, std::string);
+bool listDriveFiles(std::string);
 
 
 

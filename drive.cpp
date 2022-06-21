@@ -3,6 +3,7 @@
 #include <iostream>
 #include <cmath>
 #include <cstring>
+#include <cstdio>
 #include "drive.h"
 #include "util.h"
 #include "file-utils.h"
@@ -93,6 +94,27 @@ bool addFileToBootSector(std::string driveName, std::string bootFileName) {
   driveAccess.write(newBuffer, remainingSize);  //this has to not pass through a std::string because it contains null characters and the string copy doesn't like that
   return true;
 } 
+
+
+bool listDriveFiles(std::string driveName) {  //this is very c library heavy due to mostly using cstrings
+  std::ifstream driveAccess(driveName, std::ios::binary);
+  driveAccess.seekg(1024);  //beginning of file table in sector 1
+  char buffer[1024];
+  driveAccess.read(buffer, 1024);
+  //buffer now contains the file table. Now, parse it
+  //each entry is 16 bytes long
+  //so there are 64 potential entries (unless the format changes)
+  for(int i=0;i<64;i++) {
+    char entry[16];
+    memcpy(entry, buffer+(16*i), 16); //string isn't necessarily null-terminated, so be careful
+    if(entry[0] == '\0')
+      break; //table is over
+    fwrite(entry, sizeof(char), 12, stdout);
+    std::cout << ":\tFrom " << +entry[12] << +entry[13] << " to " << +entry[14] << +entry[15] << '\n';
+    //this string formatting will break if sector numbers go above 9, write a function to turn a char into a decimal number
+  }
+  return true;
+}
 
 
 
