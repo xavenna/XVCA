@@ -7,6 +7,7 @@
 #include "drive.h"
 #include "util.h"
 #include "file-utils.h"
+#include "encoding.h"
 
 namespace fs = std::filesystem;
 
@@ -22,6 +23,7 @@ bool packFolderToDrive(std::string folderName, std::string driveName) {
 
   //drive and folder exist, so begin constructing drive
   char blankSector[1024] = "\0";
+  //blASCIItoXSCE(blankSector, 1024);
   drive.write(blankSector, 1024);
 
   //create a file table
@@ -54,12 +56,10 @@ bool packFolderToDrive(std::string folderName, std::string driveName) {
   }
   //write filetable to file
   fileTable = padStringToSize(fileTable, 1024); //pad filetable (eventually add size check)
+  //stASCIItoXSCEr(fileTable);
+  //stASCIItoXSCEr(driveBody);
   drive.write(fileTable.c_str(), fileTable.size());
   drive.write(driveBody.c_str(), driveBody.size());
-
-
-  //now pad 
-
   return true;
 }
 
@@ -83,17 +83,19 @@ bool addFileToBootSector(std::string driveName, std::string bootFileName) {
 
   //now get the rest of the file into newDrive
   size_t fileSize = fs::file_size(fs::current_path() / driveName);
-  std::cout << "size of '" << (fs::current_path() / driveName).string() << "' is " << fileSize << '\n';
+  //std::cout << "size of '" << (fs::current_path() / driveName).string() << "' is " << fileSize << '\n';
   size_t remainingSize = fileSize - 1024;
   char* newBuffer = new char[remainingSize];
   driveAccess.read(newBuffer, remainingSize);
-  std::cout << remainingSize << '\n' << newBuffer << '\n';
+  //std::cout << remainingSize << '\n' << newBuffer << '\n';
   driveAccess.close();
   driveAccess.open(driveName, std::ios::out | std::ios::trunc | std::ios::binary);
+  //stASCIItoXSCEr(newDrive);
+  //blASCIItoXSCE(newBuffer, remainingSize);
   driveAccess.write(newDrive.data(), newDrive.size());
   driveAccess.write(newBuffer, remainingSize);  //this has to not pass through a std::string because it contains null characters and the string copy doesn't like that
   return true;
-} 
+}
 
 
 bool listDriveFiles(std::string driveName) {  //this is very c library heavy due to mostly using cstrings
@@ -107,9 +109,11 @@ bool listDriveFiles(std::string driveName) {  //this is very c library heavy due
   for(int i=0;i<64;i++) {
     char entry[16];
     memcpy(entry, buffer+(16*i), 16); //string isn't necessarily null-terminated, so be careful
-    if(entry[0] == '\0')
+    if(entry[0] == '\0')  //this should be a XSCE NULL
       break; //table is over
+    //blXSCEtoASCII(entry, 16);
     fwrite(entry, sizeof(char), 12, stdout);
+    //std::cout << ":\tFrom " << +chXSCEtoASCII(entry[12]) << +chXSCEtoASCII(entry[13]) << " to " << +chXSCEtoASCII(entry[14]) << +chXSCEtoASCII(entry[15]) << '\n';
     std::cout << ":\tFrom " << +entry[12] << +entry[13] << " to " << +entry[14] << +entry[15] << '\n';
     //this string formatting will break if sector numbers go above 9, write a function to turn a char into a decimal number
   }
@@ -117,4 +121,6 @@ bool listDriveFiles(std::string driveName) {  //this is very c library heavy due
 }
 
 
-
+bool verifyDrive(std::string) {
+  return true;  //eventually actually verify this
+}

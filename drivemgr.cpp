@@ -5,14 +5,16 @@
 #include "drive.h"
 
 /* This is the XVCA Drive manager
- *  Eventually, this will be able to pack data into a xvca drive
+ *  It is used to pack files into XVCA Drives
+
+ *  TODO: Add a function to transform encoding from ASCII to XSCE
 
  *  Functions:  (those marked with a * are complete, # means priority to complete)
  *  *-p : Packs files from a specified folder into a drive. 4 arguments
  *   -a : add. This will attempt to add a file to a drive. 4 arguments
  *  *-l : list. This lists all files contained in a drive. 3 arguments 
- *  #-h : help. This will display a help message. 2 arguments
- *  #-v : version. This will display version information. 2 arguments
+ *  *-h : help. This will display a help message. 2 arguments
+ *  *-v : version. This will display version information. 2 arguments
  *  *-b : boot. This adds a specified file to the boot sector of drive. 4 arguments
  *   -u : unpack. This will attempt to extract all files from a drive. 4 arguments
  */
@@ -27,7 +29,6 @@ int main(int argc, char** argv) {
     std::string arg(argv[1]);
     if(arg == "-h") {
       //print help message
-      std::cout << "Useful Help Message\n";
       std::cout << "XVCA Drive Manager v0.1.0-pre\n";
       std::cout << "Functions:\n";
       std::cout << "Pack:\tPacks all files from the specified folder into specified drive folder. Overwrites drive if it exists.\n\tUsage: " << argv[0] << " -p <folder> <drive>\n";
