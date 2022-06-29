@@ -6,7 +6,6 @@ This computer uses a completely original architecture. As much as possible was m
 
 See docs/ for documentation (in progress)
 
-
 ## Build Instructions
 This project contains three targets:
 * XVCA Core

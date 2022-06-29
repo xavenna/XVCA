@@ -2,7 +2,7 @@
 # but modified to fit project needs
 # Kind of a kludgy mess at the moment
 CFLAGS = -Wall -fexceptions -std=c++17
-INCD = -Iinc/
+INCD = -Iinc/ -IC:/inc/pdcurses/
 CC = g++
 
 SRCS = $(wildcard *.cpp)
@@ -15,13 +15,16 @@ HEADER = $(wildcard include/*.h)
 all: asm xvca drive
 
 ASMEXE = assembler.exe
-ASMOBJS = assembler.o util.o assembler-util.o file-utils.o # I don't think this can be automatically generated
+ASMOBJS = assembler.o util.o assembler-util.o file-utils.o
 
 XVEXE = xvca.exe
-XVOBJS = xvca.o util.o
+XVOBJS = emulator.o xvca.o util.o cpu.o register-group.o display-adapter.o file-utils.o emulate-loop.o drive.o memory-group.o
+#maybe clean up this line, if possible
+XVLIBD = -LC:/lib/
+XVLIBS = -lpdcurses -luser32
 
 DREXE = drivemgr.exe
-DROBJS = drivemgr.o util.o file-utils.o drive.o
+DROBJS = drivemgr.o util.o file-utils.o drive.o encoding.o
 
 # Assembler
 asm: $(ASMEXE)
@@ -49,7 +52,7 @@ xvca: $(XVEXE)
 include $(sources:.cpp=.d)
 
 $(XVEXE) : $(XVOBJS)
-	$(CC) -o $(XVEXE) $^
+	$(CC) $(XVLIBD) -o $(XVEXE) $^ $(XVLIBS)
 %.o : %.cpp
 	$(CC) $(CFLAGS) $(INCD) -c $< -o $@
 
