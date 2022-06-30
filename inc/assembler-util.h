@@ -5,7 +5,7 @@
 #include <map>
 
 int rewriteNum(std::string);
-int transformLineToMachineCode(std::vector<char>&, std::string, std::map<int, std::string>&);
+int transformLineToMachineCode(std::vector<char>&, std::string, std::map<int, std::string>&, int);
 bool writeMachineCodeToFile(std::vector<char>&, std::string);
 void createHeader(std::vector<char>&, std::vector<char>&, uint16_t);
 

@@ -81,7 +81,11 @@ bool assemble(std::string filename, std::string outfile) {
   }
   //now transform each line into the corresponding machine code instruction(s)
   for(size_t i=0;i<lines.size();i++) {
-    int value = transformLineToMachineCode(machineCode, lines[i], jumpHash);
+    int value = transformLineToMachineCode(machineCode, lines[i], jumpHash, i);
+    if(value < 0) {
+      //error:
+      return false;
+    }
     codesPerLine.push_back(value);
   }
   fixLabelJumpPoints(machineCode, labelHash, jumpHash, codesPerLine);  //jumpHash: {address location in bytecode, target label}
