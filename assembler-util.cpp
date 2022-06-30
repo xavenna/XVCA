@@ -1,4 +1,5 @@
 #include "assembler-util.h"
+#include "util.h"
 #include <iostream>
 #include <map>
 #include <fstream>
@@ -31,7 +32,7 @@ void createHeader(std::vector<char>& machineCode, std::vector<char>& machineCode
 
 }
 
-int transformLineToMachineCode(std::vector<char>& machineCode, std::string line, std::map<int, std::string>& jumpHash, int lineNum) {
+int transformLineToMachineCode(std::vector<char>& machineCode, std::string line, std::map<int, std::string>& jumpHash, int lineNum) {  //maybe move this function to a new file, as it is over 1000 lines of code
   //std::cout << line << ',' << line.size() << '\n';
   size_t beginSize = machineCode.size();  //used for creating label offsets 
   line = line.substr(0,line.find(";")); //trim comments
@@ -353,9 +354,11 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
   else if(instName == "MVYI") {
     machineCode.push_back(0x15);
   }
-  else if(instName == "MVVM") {     //End of MOV instructions
+  else if(instName == "MVVM") {
     //maybe this shouldn't be part of the instruction set
     //because this would be annoying to code
+    std::cout << "The MVVM Instruction has not yet been implemented. Please avoid using it for now.\n";
+    return -1;
   }  
   else if(instName == "PUSH") {
     if(line.size() < 6) {
@@ -374,11 +377,17 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
       else if(line[5] == 'F') {
 	machineCode.push_back(0x33);
       }
+      else if(line.size() > 6 && line[5] == 'P' && line[6] == 'C') {
+	machineCode.push_back(0x38);
+      }
+      else if(line.size() > 6 && line[5] == 'S' && line[6] == 'P') {
+	machineCode.push_back(0x39);
+      }
       else {
 	std::cout << "Error: invalid argument for instruction '" << instName << "'\n";
       }
     }
-  }  //add SP and PC to PUSH and POP
+  }
   else if(instName == "POP") {
     if(line.size() < 5) {
       std::cout << "Error: missing argument for instruction '" << instName << "'\n";
@@ -395,6 +404,12 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
       }
       else if(line[4] == 'F') {
 	machineCode.push_back(0x37);
+      }
+      else if(line.size() > 6 && line[5] == 'P' && line[6] == 'C') {
+	machineCode.push_back(0x3a);
+      }
+      else if(line.size() > 6 && line[5] == 'S' && line[6] == 'P') {
+	machineCode.push_back(0x3b);
       }
       else {
 	std::cout << "Error: invalid argument for instruction '" << instName << "'\n";
@@ -426,7 +441,7 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
       catch (...) {
 	//target is label
 	int targetLocation = machineCode.size();
-	jumpHash.emplace(targetLocation, line.substr(5, line.find(" ", 6)));
+	jumpHash.emplace(targetLocation, line.substr(4, line.find(" ", 5)));
 	machineCode.push_back(0x00);
 	machineCode.push_back(0x00);
       }
@@ -456,7 +471,7 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
       }
       catch (...) {
 	int targetLocation = machineCode.size();
-	jumpHash.emplace(targetLocation, line.substr(5, line.find(" ", 6)));
+	jumpHash.emplace(targetLocation, line.substr(3, line.find(" ", 4)));
 	machineCode.push_back(0x00);
 	machineCode.push_back(0x00);
       }
@@ -486,7 +501,7 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
       }
       catch (...) {
 	int targetLocation = machineCode.size();
-	jumpHash.emplace(targetLocation, line.substr(5, line.find(" ", 6)));
+	jumpHash.emplace(targetLocation, line.substr(4, line.find(" ", 5)));
 	machineCode.push_back(0x00);
 	machineCode.push_back(0x00);
       }
@@ -516,7 +531,7 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
       }
       catch (...) {
 	int targetLocation = machineCode.size();
-	jumpHash.emplace(targetLocation, line.substr(5, line.find(" ", 6)));
+	jumpHash.emplace(targetLocation, line.substr(3, line.find(" ", 4)));
 	machineCode.push_back(0x00);
 	machineCode.push_back(0x00);
       }
@@ -546,7 +561,7 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
       }
       catch (...) {
 	int targetLocation = machineCode.size();
-	jumpHash.emplace(targetLocation, line.substr(5, line.find(" ", 6)));
+	jumpHash.emplace(targetLocation, line.substr(4, line.find(" ", 5)));
 	machineCode.push_back(0x00);
 	machineCode.push_back(0x00);
       }
@@ -1111,6 +1126,8 @@ bool fixLabelJumpPoints(std::vector<char>& machineCode, std::map<std::string, in
   //labelHash contains a list of which line of code each label corresponds to
   //jumpTable contains a list of where a label is needed (in machine code), and which label is needed there
   //codesPerLine tells how many bytes of machine code each line was translated into
+
+
   
 
   //first, construct a list of the machine code positions of each line of code
@@ -1119,29 +1136,42 @@ bool fixLabelJumpPoints(std::vector<char>& machineCode, std::map<std::string, in
   for(auto x : codesPerLine) {  //make sure this actually works
     cumulativePosition.push_back(accum);
     accum += x;
+    //std::cout << accum << '\n';
   }
+  cumulativePosition.push_back(accum);
 
   //second, create a list of where each label is located in machine code, rather than lines of code
   for(auto& x : labelHash) {
-    x.second = cumulativePosition[x.second];  //make sure this actually works
+    x.second = cumulativePosition.at(x.second);  //make sure this actually works
+    //std::cout << x.first << ',' << x.second << '\n';
   }
 
   //next, iterate through jumpTable to find each place where an address is needed.
   //  Find where that label is located in machine code, and write the address to the placeholder space after the instruction
   try {
     for(auto x : jumpTable) {
-      //x.second() is label name
-      //labelHash[x.second()] is label position
-      //add label position to starting offset, and write to machineCode[x.first()]
-      int relativeAddress = labelHash[x.second];  //add exception handling here, as an undefined label will currently cause a crash
+      //x.second is label name
+      //labelHash[x.second] is label position
+      //add label position to starting offset, and write to machineCode[x.first]
+      if(labelHash.find(x.second) == labelHash.end()) {
+	std::cout << "Error: Attempt to jump to nonexistant label.\n";
+	return false;
+      }
+      int relativeAddress = labelHash.find(x.second)->second;  //add exception handling here, as an undefined label will currently cause a crash
       int absoluteAddress = relativeAddress + 0x1000;  //0x1000 is the program loading point, and thus the location of the first byte of machine code
       machineCode[x.first] = (absoluteAddress & 0xff00) >> 8;
       machineCode[x.first+1] = absoluteAddress & 0xff;
       
+      //std::cout << x.first << ',' << x.second << ',' << labelHash.find(x.second)->second << '\n';
+      if(labelHash.find(x.second) == labelHash.end()) {
+	std::cout << "Error: couldn't find label\n";
+      }
+      //std::cout << relativeAddress << '|' << absoluteAddress << '\n';
+      //std::cout << machineCode[x.first] << ',' << machineCode[x.first+1] << '\n';
     }
   }
   catch (...) {
-    std::cout << "Error: invalid label. (or a bug. If you didn't make any label mistakes, please contact the developer)\n";
+    std::cout << "Error: invalid label. (or a bug. If you know you didn't make any label mistakes, please contact the developer)\n";
     return false;
   }
   
