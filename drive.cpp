@@ -69,31 +69,39 @@ bool addFileToBootSector(std::string driveName, std::string bootFileName) {
   std::ifstream fileAccess(bootFileName, std::ios::binary);
   char buffer[1024];
   std::string emptySector(1024, '\0');
-  std::string newDrive;
   driveAccess.open(driveName, std::ios::in | std::ios::binary);
-  driveAccess.read(buffer, 1024);
-
-  if(emptySector != buffer && !confirm("The boot sector is not empty. Are you sure you want to overwrite it?")) {
+  if(!driveAccess.is_open()) {
+    std::cout  << "Error: drive couldn't be opened.\n";
     return false;
   }
 
-  //write first 1 KiB of bootFileName to newDrive
-  fileAccess.read(buffer, 1024);
-  newDrive += padStringToSize(buffer, 1024);
+  driveAccess.read(buffer, 1024);
+  if(memcmp(buffer, emptySector.c_str(), 1024) != 0 && !confirm("The boot sector is not empty. Are you sure you want to overwrite it?")) {
+    return false;
+  }
 
-  //now get the rest of the file into newDrive
+  //if drive exists, prepare a char* to place its contents into
   size_t fileSize = fs::file_size(fs::current_path() / driveName);
-  //std::cout << "size of '" << (fs::current_path() / driveName).string() << "' is " << fileSize << '\n';
-  size_t remainingSize = fileSize - 1024;
-  char* newBuffer = new char[remainingSize];
-  driveAccess.read(newBuffer, remainingSize);
-  //std::cout << remainingSize << '\n' << newBuffer << '\n';
+  char* driveBuffer = new char[fileSize];
+
+  //load contents of drive into driveBuffer, then close driveAccess as it is no longer necessary
+  driveAccess.read(driveBuffer, fileSize);
   driveAccess.close();
+  
+  //write first 1 KiB of bootFileName to driveBuffer
+  fileAccess.read(buffer, 1024);
+
+  //move said contents to the beginning of driveBuffer
+  memcpy(driveBuffer, buffer, 1024);
+  
+  //now, reopen driveAccess in output mode
   driveAccess.open(driveName, std::ios::out | std::ios::trunc | std::ios::binary);
-  //stASCIItoXSCEr(newDrive);
-  //blASCIItoXSCE(newBuffer, remainingSize);
-  driveAccess.write(newDrive.data(), newDrive.size());
-  driveAccess.write(newBuffer, remainingSize);  //this has to not pass through a std::string because it contains null characters and the string copy doesn't like that
+
+  //blASCIItoXSCE(newBuffer, fileSize);   //If I can get this working, then uncomment and fix these lines
+
+  //write driveBuffer to drive file
+  driveAccess.write(driveBuffer, fileSize);
+  delete[] driveBuffer;
   return true;
 }
 

@@ -14,11 +14,15 @@ int rewriteNum(std::string n) {
     //number is hex
     return std::stoi (n.substr(1),nullptr,16);
   }
+  else if(n.substr(0,1) == "%") {
+    //number is binary
+    return std::stoi (n.substr(1),nullptr,2);
+  }
   else {
     //number is decimal
     return std::stoi (n);
   }
-  throw -1;
+  throw -1;  //this should never be reached. TBH, I have no idea why it is here
 }
 
 void createHeader(std::vector<char>& machineCode, std::vector<char>& machineCodeWithHeader, uint16_t jp) {
@@ -1118,6 +1122,7 @@ bool writeMachineCodeToFile(std::vector<char>& machineCode, std::string filename
   char* buffer = new char[len];
   memcpy(buffer, &(*machineCode.begin()), len);
   put.write(buffer, len);
+  delete[] buffer;
   return true;
 }
 
@@ -1126,8 +1131,6 @@ bool fixLabelJumpPoints(std::vector<char>& machineCode, std::map<std::string, in
   //labelHash contains a list of which line of code each label corresponds to
   //jumpTable contains a list of where a label is needed (in machine code), and which label is needed there
   //codesPerLine tells how many bytes of machine code each line was translated into
-
-
   
 
   //first, construct a list of the machine code positions of each line of code
@@ -1136,14 +1139,12 @@ bool fixLabelJumpPoints(std::vector<char>& machineCode, std::map<std::string, in
   for(auto x : codesPerLine) {  //make sure this actually works
     cumulativePosition.push_back(accum);
     accum += x;
-    //std::cout << accum << '\n';
   }
   cumulativePosition.push_back(accum);
 
   //second, create a list of where each label is located in machine code, rather than lines of code
   for(auto& x : labelHash) {
-    x.second = cumulativePosition.at(x.second);  //make sure this actually works
-    //std::cout << x.first << ',' << x.second << '\n';
+    x.second = cumulativePosition.at(x.second);
   }
 
   //next, iterate through jumpTable to find each place where an address is needed.
@@ -1162,12 +1163,9 @@ bool fixLabelJumpPoints(std::vector<char>& machineCode, std::map<std::string, in
       machineCode[x.first] = (absoluteAddress & 0xff00) >> 8;
       machineCode[x.first+1] = absoluteAddress & 0xff;
       
-      //std::cout << x.first << ',' << x.second << ',' << labelHash.find(x.second)->second << '\n';
       if(labelHash.find(x.second) == labelHash.end()) {
 	std::cout << "Error: couldn't find label\n";
       }
-      //std::cout << relativeAddress << '|' << absoluteAddress << '\n';
-      //std::cout << machineCode[x.first] << ',' << machineCode[x.first+1] << '\n';
     }
   }
   catch (...) {

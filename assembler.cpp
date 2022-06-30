@@ -62,6 +62,9 @@ bool assemble(std::string filename, std::string outfile) {
   }
   //prepare header
   int counter = 0;
+  std::getline(get, line);
+  bool header = (line != "#NOHEADER");  //check if NOHEADER is set
+  //get.seekg(0, get.beg);
   while(get.peek() != EOF) {
     std::getline(get, line);
     if(line.size() <= 1) {
@@ -90,17 +93,21 @@ bool assemble(std::string filename, std::string outfile) {
   }
   fixLabelJumpPoints(machineCode, labelHash, jumpHash, codesPerLine);  //jumpHash: {address location in bytecode, target label}
   auto jumpPoint = labelHash.find("begin");
-  if(jumpPoint == labelHash.end()) {
+  if(header && jumpPoint == labelHash.end()) {
     std::cout << "Error: 'begin' label not found.\n";
     return false;
   }
-  int jump = jumpPoint->second + 0x1000;  //0x1000 is the offset
-  //std::cout << "jump point rel: " << jumpPoint->second << " abs: " << jump << '\n';
   std::vector<char> newMachineCode;
-  createHeader(machineCode, newMachineCode, jump);  //create header
+  if(header) {
+    int jump = jumpPoint->second + 0x1000;  //0x1000 is the offset
+    createHeader(machineCode, newMachineCode, jump);  //create header
+    writeMachineCodeToFile(newMachineCode, outfile);
+  }
+  else {
+    writeMachineCodeToFile(machineCode, outfile);  //no header, so createHeader doesn't need to do anything
+  }
   //for debugging, print the contents of machineCode
   //for(auto x : machineCode) { std::cout << HEX( x ) << '\n';}
-  //write assembly to file
-  writeMachineCodeToFile(newMachineCode, outfile);
+
   return true;  //nothing went wrong
 }
