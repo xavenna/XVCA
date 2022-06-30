@@ -67,7 +67,8 @@ void CPU::executeInstruction() {
     //MVXM <a>
     break;
   case '\x12':
-    
+    //MVYM <a>
+    break;
   }
 }
 
