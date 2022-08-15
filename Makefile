@@ -1,83 +1,72 @@
-# based on code from https://stackoverflow.com/a/20830354
-# but modified to fit project needs
-# Kind of a kludgy mess at the moment
-CFLAGS = -Wall -fexceptions -std=c++17
-INCD = -Iinc/ -IC:/inc/pdcurses/
-CC = g++
+# This makefile was created with help from the following stackoverflow answer:
+# https://stackoverflow.com/a/23418196
 
-SRCS = $(wildcard *.cpp)
-OBJS = $(SRCS:.cpp=.o)
-HEADER = $(wildcard include/*.h)
+LLIB = -lncurses
+CXX = g++
+CPPFLAGS = -Wall -Wextra -fexceptions -std=c++17
 
-.PHONY: all clean asm xvca drive remake
+ASMEXE = assembler
+XVEXE = xvca
+DREXE = drivemgr
 
-# Default build
+ifeq ($(OS),Windows_NT)
+XVEXE += .exe
+DREXE += .exe
+ASMEXE += .exe
+else
+LFLAGS +=  -no-pie
+endif
+
+ifeq (1, $(REL))
+  CPPFLAGS += -O2 -s -DNDEBUG
+  OBJ_DIR = ./obj/release
+else
+  CPPFLAGS += -g -O0
+  OBJ_DIR = ./obj/debug
+endif
+
+SRCS = $(wildcard src/*.cpp)
+df = $(OBJ_DIR)/$(*F)
+AUTODEPS:=$(patsubst src/%.cpp, $(OBJ_DIR)/%.d, $(SRCS))
+OBJS:=$(patsubst src/%.cpp, $(OBJ_DIR)/%.o, $(SRCS))
+
+ASMOBJS := $(addprefix $(OBJ_DIR)/,assembler.o util.o assembler-util.o file-utils.o)
+
+XVOBJS = $(addprefix $(OBJ_DIR)/,emulator.o xvca.o util.o cpu.o register-group.o display-adapter.o file-utils.o emulate-loop.o drive.o memory-group.o)
+
+DROBJS = $(addprefix $(OBJ_DIR)/,drivemgr.o util.o file-utils.o drive.o encoding.o)
+
+.PHONY : all clean tilde debug release remake asm xvca drive
+
 all: asm xvca drive
 
-ASMEXE = assembler.exe
-ASMOBJS = assembler.o util.o assembler-util.o file-utils.o
-
-XVEXE = xvca.exe
-XVOBJS = emulator.o xvca.o util.o cpu.o register-group.o display-adapter.o file-utils.o emulate-loop.o drive.o memory-group.o
-#maybe clean up this line, if possible
-XVLIBD = -LC:/lib/
-XVLIBS = -lpdcurses -luser32
-
-DREXE = drivemgr.exe
-DROBJS = drivemgr.o util.o file-utils.o drive.o encoding.o
-
-# Assembler
-asm: $(ASMEXE)
-
-%.d: %.cpp
-	@set -e; rm -f $@; \
-	$(CC) -MM $(CFLAGS) $(INCD) -c $< > $@.$$$$; \
-	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
-	rm -f $@.$$$$
-include $(sources:.cpp=.d)
-
-$(ASMEXE): $(ASMOBJS)
-	$(CC) -o assembler.exe $^
-%.o: %.cpp
-	$(CC) $(CFLAGS) $(INCD) -c $< -o $@
-
-# XVCA core
-xvca: $(XVEXE)
-
-%.d: %.cpp
-	@set -e; rm -f $@; \
-	$(CC) -MM $(CFLAGS) $(INCD) -c $< > $@.$$$$; \
-	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
-	rm -f $@.$$$$
-include $(sources:.cpp=.d)
-
-$(XVEXE) : $(XVOBJS)
-	$(CC) $(XVLIBD) -o $(XVEXE) $^ $(XVLIBS)
-%.o : %.cpp
-	$(CC) $(CFLAGS) $(INCD) -c $< -o $@
-
-# Drive Manager
 drive: $(DREXE)
 
-%.d: %.cpp
-	@set -e; rm -f $@; \
-	$(CC) -MM $(CFLAGS) $(INCD) -c $< > $@.$$$$; \
-	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
-	rm -f $@.$$$$
-include $(sources:.cpp=.d)
+asm: $(ASMEXE)
 
-$(DREXE) : $(DROBJS)
-	$(CC) -o $(DREXE) $^
-%.o : %.cpp
-	$(CC) $(CFLAGS) $(INCD) -c $< -o $@
+ifeq ($(XVEXE),xvca)
 
-#
-# Other rules
-#
-#prep:
-#	@mkdir -p $(DBGDIR) $(RELDIR) $(HDIR)
+else
+xvca: $(XVEXE)
+endif 
+$(ASMEXE): $(ASMOBJS)
+	$(CXX) $(LFLAGS) -o $@ $^
+
+$(DREXE): $(DROBJS)
+	$(CXX) $(LFLAGS) -o $@ $^
+
+$(XVEXE): $(XVOBJS)
+	$(CXX) $(LFLAGS) -o $@ $^ $(LLIB)
+
+$(OBJ_DIR)/%.o: src/%.cpp
+	@$(CXX) -MM -MP -MT $(df).o -MT $(df).d $(CPPFLAGS) $< > $(df).d
+	$(CXX) $(CPPFLAGS) -c $< -o $@
+
+-include $(AUTODEPS)
 
 remake: clean all
 
-clean:
-	rm -f $(XVEXE) $(XVOBJS) $(ASMEXE) $(ASMOBJS) $(DREXE) $(DROBJS)
+clean :
+	rm -f obj/debug/*.o obj/release/*.o obj/debug/*.d obj/release/*.d ./xvca ./drivemgr ./asm
+tilde :
+	rm *~
