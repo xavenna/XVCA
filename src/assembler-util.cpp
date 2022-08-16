@@ -545,19 +545,19 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     }
   }
   else if(instName == "MVAI") {
-    machineCode.push_back(0x20);
+    machineCode.push_back(0x1a);
   }
   else if(instName == "MVBI") {
-    machineCode.push_back(0x21);
+    machineCode.push_back(0x1b);
   }
   else if(instName == "MVCI") {
-    machineCode.push_back(0x22);
+    machineCode.push_back(0x1c);
   }
   else if(instName == "MVXI") {
-    machineCode.push_back(0x23);
+    machineCode.push_back(0x1d);
   }
   else if(instName == "MVYI") {
-    machineCode.push_back(0x24);
+    machineCode.push_back(0x1e);
   }
   else if(instName == "MVVM") {
     //maybe this shouldn't be part of the instruction set
