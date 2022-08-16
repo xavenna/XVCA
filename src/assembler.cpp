@@ -64,7 +64,12 @@ bool assemble(std::string filename, std::string outfile) {
   int counter = 0;
   std::getline(get, line);
   bool header = (line != "#NOHEADER");  //check if NOHEADER is set
-  //get.seekg(0, get.beg);
+  if(line.at(0) == '#') {  //if line is a directive
+
+  }
+  else {
+    get.seekg(0);
+  }
   while(get.peek() != EOF) {
     std::getline(get, line);
     if(line.size() <= 1) {
@@ -87,11 +92,16 @@ bool assemble(std::string filename, std::string outfile) {
     int value = transformLineToMachineCode(machineCode, lines[i], jumpHash, i);
     if(value < 0) {
       //error:
+      std::cout << "Error: instruction not turned to machine code\n";
       return false;
     }
     codesPerLine.push_back(value);
   }
-  fixLabelJumpPoints(machineCode, labelHash, jumpHash, codesPerLine);  //jumpHash: {address location in bytecode, target label}
+
+  fixLabelJumpPoints(machineCode, labelHash, jumpHash, codesPerLine);
+  //TODO: Make fixLabelJumpPoints able to create a label table (e.g. for syscalls or driver functions)
+
+  //jumpHash: {address location in bytecode, target label}
   auto jumpPoint = labelHash.find("begin");
   if(header && jumpPoint == labelHash.end()) {
     std::cout << "Error: 'begin' label not found.\n";
@@ -109,5 +119,6 @@ bool assemble(std::string filename, std::string outfile) {
   //for debugging, print the contents of machineCode
   //for(auto x : machineCode) { std::cout << HEX( x ) << '\n';}
 
+  std::cout << "Assembly successful\n";
   return true;  //nothing went wrong
 }

@@ -36,19 +36,16 @@ XVOBJS = $(addprefix $(OBJ_DIR)/,emulator.o xvca.o util.o cpu.o register-group.o
 
 DROBJS = $(addprefix $(OBJ_DIR)/,drivemgr.o util.o file-utils.o drive.o encoding.o)
 
-.PHONY : all clean tilde debug release remake asm xvca drive
+.PHONY : all clean tilde debug release remake asm emu drive
 
-all: asm xvca drive
+all: asm emu drive
 
 drive: $(DREXE)
 
 asm: $(ASMEXE)
 
-ifeq ($(XVEXE),xvca)
+emu: $(XVEXE)
 
-else
-xvca: $(XVEXE)
-endif 
 $(ASMEXE): $(ASMOBJS)
 	$(CXX) $(LFLAGS) -o $@ $^
 
@@ -67,6 +64,6 @@ $(OBJ_DIR)/%.o: src/%.cpp
 remake: clean all
 
 clean :
-	rm -f obj/debug/*.o obj/release/*.o obj/debug/*.d obj/release/*.d ./xvca ./drivemgr ./asm
+	rm -f obj/debug/*.o obj/release/*.o obj/debug/*.d obj/release/*.d ./xvca ./drivemgr ./assembler
 tilde :
 	rm *~

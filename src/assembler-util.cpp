@@ -824,7 +824,7 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     else {
       machineCode.push_back(0x50);
       if(isReg(line[4])) {
-	machineCode.push_back(regToNum(line[5]));
+	machineCode.push_back(regToNum(line[4]));
       }
       else {
 	std::cout << "Error: invalid argument for instruction '" << instName << "'\n";
@@ -1370,8 +1370,7 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     machineCode.push_back(0xff);
   }
   else {
-    std::cout << "Error: invalid instruction '" << instName << "' at line "
-	      << lineNum << ".\n";
+    std::cout << "Error: invalid instruction '" << instName << "' at line " << lineNum << ".\n";
     return -1;
   }
   return (machineCode.size() - beginSize);  //number of instructions added
@@ -1455,6 +1454,7 @@ bool isReg(char code) {
 }
 
 char regToNum(char reg) {
+  std::string n;
   switch(reg) {
   case 'A':
     return 0x0;
@@ -1467,6 +1467,7 @@ char regToNum(char reg) {
   case 'Y':
     return 0x4;
   default:
-    throw std::invalid_argument("regToNum() : Invalid register");
+    n = "regToNum(): Invalid register " + reg;
+    throw std::invalid_argument(n);
   }
 }

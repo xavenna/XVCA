@@ -33,3 +33,12 @@
 
 # Emacs tilde files
 *~
+
+# Linux executables
+assembler
+drivemgr
+xvca
+
+# Special directories
+asm/*
+obj/*
