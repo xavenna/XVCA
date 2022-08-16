@@ -8,8 +8,11 @@ void RegisterGroup::clearPCB() {
 
 RegisterGroup::RegisterGroup() {
   registerA = 0;
+  registerB = 0;
+  registerC = 0;
   registerX = 0;
   registerY = 0;
   programCounter = 0;
   stackPointer = 0;
+  clearPCB();
 }

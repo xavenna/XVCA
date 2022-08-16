@@ -20,14 +20,14 @@ int beginEmulation(std::string targetDriveName) {
   Emulator emulator;
   emulator.setDrive(targetDriveName);
 
-  initscr();  //set up pdcurses window
+  initscr();  //set up ncurses window
 
   while(true) {
     if(!emulator.runCycle())
       break;
   }
 
-  endwin();  //cleanup pdcurses
+  endwin();  //cleanup ncurses
   
   return 0;  //assuming everything goes well
 }

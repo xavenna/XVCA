@@ -5,6 +5,8 @@
 class RegisterGroup {
 public:
   char registerA;
+  char registerB;
+  char registerC;
   char registerX;
   char registerY;
   uint16_t programCounter;
