@@ -172,23 +172,23 @@ void CPU::executeInstruction() {
     break;
   case 0x10:
     //MVIA
-    registers.registerA = memory.read((registers.registerX << 8) & registers.registerY);
+    registers.registerA = memory.read(registers.XY());
     break;
   case 0x11:
     //MVIB
-    registers.registerB = memory.read((registers.registerX << 8) & registers.registerY);
+    registers.registerB = memory.read(registers.XY());
     break;
   case 0x12:
     //MVIC
-    registers.registerC = memory.read((registers.registerX << 8) & registers.registerY);
+    registers.registerC = memory.read(registers.XY());
     break;
   case 0x13:
     //MVIX
-    registers.registerX = memory.read((registers.registerX << 8) & registers.registerY);
+    registers.registerX = memory.read(registers.XY());
     break;
   case 0x14:
     //MVIY
-    registers.registerY = memory.read((registers.registerX << 8) & registers.registerY);
+    registers.registerY = memory.read(registers.XY());
     break;
   case 0x15:
     //MVAM <a>
@@ -212,23 +212,23 @@ void CPU::executeInstruction() {
     break;
   case 0x1a:
     //MVAI
-    memory.write((registers.registerX << 8) & registers.registerY, registers.registerA);
+    memory.write(registers.XY(), registers.registerA);
     break;
   case 0x1b:
     //MVBI
-    memory.write((registers.registerX << 8) & registers.registerY, registers.registerB);
+    memory.write(registers.XY(), registers.registerB);
     break;
   case 0x1c:
     //MVCI
-    memory.write((registers.registerX << 8) & registers.registerY, registers.registerC);
+    memory.write(registers.XY(), registers.registerC);
     break;
   case 0x1d:
     //MVXI
-    memory.write((registers.registerX << 8) & registers.registerY, registers.registerX);
+    memory.write(registers.XY(), registers.registerX);
     break;
   case 0x1e:
     //MVYI
-    memory.write((registers.registerX << 8) & registers.registerY, registers.registerY);
+    memory.write(registers.XY(), registers.registerY);
     break;
 
     //////////////////////
@@ -450,7 +450,7 @@ void CPU::executeInstruction() {
     break;
   case 0x54:
     //ADI
-    address = registers.registerA + memory.read((registers.registerX << 8) & registers.registerY);
+    address = registers.registerA + memory.read(registers.XY());
     registers.flags.carry = (address > 0xff);
     registers.registerA = address & 0xff;
     registers.flags.zero = (registers.registerA == 0);
@@ -458,7 +458,7 @@ void CPU::executeInstruction() {
     break;
   case 0x55:
     //ADCI
-    address = registers.registerA + memory.read((registers.registerX << 8) & registers.registerY) + registers.flags.carry;
+    address = registers.registerA + memory.read(registers.XY()) + registers.flags.carry;
     registers.flags.carry = (address > 0xff);
     registers.registerA = address & 0xff;
     registers.flags.zero = (registers.registerA == 0);
@@ -536,7 +536,7 @@ void CPU::executeInstruction() {
     break;
   case 0x5a:
     //SBI
-    address = registers.registerA + !(memory.read((registers.PCB[1] << 8) & registers.PCB[2])) + 1;
+    address = registers.registerA + !(memory.read(registers.XY())) + 1;
     registers.flags.carry = (address > 0xff);
     registers.registerA = address & 0xff;
     registers.flags.zero = (registers.registerA == 0);
@@ -544,7 +544,7 @@ void CPU::executeInstruction() {
     break;
   case 0x5b:
     //SBCI
-    address = registers.registerA + !(memory.read((registers.PCB[1] << 8) & registers.PCB[2])) + 1 + registers.flags.carry;
+    address = registers.registerA + !(memory.read(registers.XY())) + 1 + registers.flags.carry;
     registers.flags.carry = (address > 0xff);
     registers.registerA = address & 0xff;
     registers.flags.zero = (registers.registerA == 0);
@@ -584,7 +584,7 @@ void CPU::executeInstruction() {
     break;
   case 0x5e:
     //CMPI
-    char8 = memory.read((registers.registerX << 8) & registers.registerY);
+    char8 = memory.read(registers.XY());
     registers.flags.equal = (char8 == registers.registerA);
     registers.flags.greater = (char8 > registers.registerA);
     registers.flags.sign = (registers.registerA-char8) & 0x80;
@@ -594,6 +594,165 @@ void CPU::executeInstruction() {
     //  LOGICAL INSTRUCTIONS
     //////////////////////////
 
+
+  case 0x70:
+    //ORR <r>
+    switch (registers.PCB[1]) {
+    case 0:
+      char8 = registers.registerA;
+      break;
+    case 1:
+      char8 = registers.registerB;
+      break;
+    case 2:
+      char8 = registers.registerC;
+      break;
+    case 3:
+      char8 = registers.registerX;
+      break;
+    case 4:
+      char8 = registers.registerY;
+      break;
+    default:
+      throw std::invalid_argument("Invalid argument to instruction.");
+    }
+    registers.registerA |= char8;
+    registers.flags.zero = (registers.registerA == 0);
+    registers.flags.sign = (registers.registerA & 0x80);
+    break;
+  case 0x71:
+    //ORV <v>
+    char8 = registers.PCB[1];
+    registers.registerA |= char8;
+    registers.flags.zero = (registers.registerA == 0);
+    registers.flags.sign = (registers.registerA & 0x80);
+    break;
+  case 0x72:
+    //ORI
+    char8 = memory.read(registers.XY());
+    registers.registerA |= char8;
+    registers.flags.zero = (registers.registerA == 0);
+    registers.flags.sign = (registers.registerA & 0x80);
+    break;
+  case 0x73:
+    //ANDR <r>
+    switch (registers.PCB[1]) {
+    case 0:
+      char8 = registers.registerA;
+      break;
+    case 1:
+      char8 = registers.registerB;
+      break;
+    case 2:
+      char8 = registers.registerC;
+      break;
+    case 3:
+      char8 = registers.registerX;
+      break;
+    case 4:
+      char8 = registers.registerY;
+      break;
+    default:
+      throw std::invalid_argument("Invalid argument to instruction.");
+    }
+    registers.registerA |= char8;
+    registers.flags.zero = (registers.registerA == 0);
+    registers.flags.sign = (registers.registerA & 0x80);
+    break;
+  case 0x74:
+    //ANDV <v>
+    char8 = registers.PCB[1];
+    registers.registerA |= char8;
+    registers.flags.zero = (registers.registerA == 0);
+    registers.flags.sign = (registers.registerA & 0x80);
+    break;
+  case 0x75:
+    //ANDI
+    char8 = memory.read(registers.XY());
+    registers.registerA |= char8;
+    registers.flags.zero = (registers.registerA == 0);
+    registers.flags.sign = (registers.registerA & 0x80);
+    break;
+  case 0x76:
+    //XORR <r>
+    switch (registers.PCB[1]) {
+    case 0:
+      char8 = registers.registerA;
+      break;
+    case 1:
+      char8 = registers.registerB;
+      break;
+    case 2:
+      char8 = registers.registerC;
+      break;
+    case 3:
+      char8 = registers.registerX;
+      break;
+    case 4:
+      char8 = registers.registerY;
+      break;
+    default:
+      throw std::invalid_argument("Invalid argument to instruction.");
+    }
+    registers.registerA |= char8;
+    registers.flags.zero = (registers.registerA == 0);
+    registers.flags.sign = (registers.registerA & 0x80);
+    break;
+  case 0x77:
+    //XORV <v>
+    char8 = registers.PCB[1];
+    registers.registerA |= char8;
+    registers.flags.zero = (registers.registerA == 0);
+    registers.flags.sign = (registers.registerA & 0x80);
+    break;
+  case 0x78:
+    //XORI
+    char8 = memory.read(registers.XY());
+    registers.registerA |= char8;
+    registers.flags.zero = (registers.registerA == 0);
+    registers.flags.sign = (registers.registerA & 0x80);
+    break;
+  case 0x79:
+    //NOTR <r>
+    switch (registers.PCB[1]) {
+    case 0:
+      char8 = registers.registerA;
+      break;
+    case 1:
+      char8 = registers.registerB;
+      break;
+    case 2:
+      char8 = registers.registerC;
+      break;
+    case 3:
+      char8 = registers.registerX;
+      break;
+    case 4:
+      char8 = registers.registerY;
+      break;
+    default:
+      throw std::invalid_argument("Invalid argument to instruction.");
+    }
+    registers.registerA |= char8;
+    registers.flags.zero = (registers.registerA == 0);
+    registers.flags.sign = (registers.registerA & 0x80);
+    break;
+  case 0x7a:
+    //NOTV <v>
+    char8 = registers.PCB[1];
+    registers.registerA |= char8;
+    registers.flags.zero = (registers.registerA == 0);
+    registers.flags.sign = (registers.registerA & 0x80);
+    break;
+  case 0x7b:
+    //NOTI
+    char8 = memory.read(registers.XY());
+    registers.registerA |= char8;
+    registers.flags.zero = (registers.registerA == 0);
+    registers.flags.sign = (registers.registerA & 0x80);
+    break;
+    
+    
     ////////////////////////////////
     //  MISCELLANEOUS INSTRUCTIONS
     ////////////////////////////////

@@ -17,6 +17,7 @@ public:
   char PCB[4];  //this may need to be longer
   unsigned PCBPos;  //where next fetched instruction goes
   void clearPCB();
+  uint16_t XY();
   RegisterGroup();
 };
 

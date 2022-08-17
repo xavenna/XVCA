@@ -6,6 +6,9 @@ void RegisterGroup::clearPCB() {
   }
 }
 
+uint16_t XY() {
+  return (registerX << 8) & registerY;
+}
 RegisterGroup::RegisterGroup() {
   registerA = 0;
   registerB = 0;
