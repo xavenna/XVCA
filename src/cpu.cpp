@@ -757,6 +757,44 @@ void CPU::executeInstruction() {
     //  MISCELLANEOUS INSTRUCTIONS
     ////////////////////////////////
 
+  case 0x80:
+    //SPI <v>
+    registers.stackPointer += registers.PCB[1];
+    break;
+  case 0x81:
+    //SPIA
+    registers.stackPointer += registers.registerA;
+    break;
+  case 0x82:
+    //SPD <v>
+    registers.stackPointer -= registers.PCB[1];
+    break;
+  case 0x83:
+    //SPDA
+    registers.stackPointer -= registers.registerA;
+    break;
+  case 0x84:
+    //PCI <v>
+    registers.programCounter += registers.PCB[1];
+    break;
+  case 0x85:
+    //PCIA
+    registers.programCounter += registers.registerA;
+    break;
+  case 0x86:
+    //PCD <v>
+    registers.programCounter -= registers.PCB[1];
+    break;
+  case 0x87:
+    //PCDA
+    registers.programCounter -= registers.registerA;
+    break;
+  case 0x88:
+    //SPS <a>
+    registers.stackPointer = (registers.PCB[1] << 8) & registers.PCB[2];
+    break;
+
+    //No instructions exist in this gap
 
   case 0xff:
     //HLT
