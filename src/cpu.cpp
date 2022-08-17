@@ -11,6 +11,7 @@ void CPU::fetchInsToPCB() {
 
 void CPU::executeInstruction() {
   uint16_t address = 0;
+  char temp8 = 0;
   switch(registers.PCB[0]) {
     //this needs to be redone for XVCA=-p2
   case 0x0:
@@ -378,6 +379,232 @@ void CPU::executeInstruction() {
     ///////////////////////
     // ARITHMETIC OPCODES
     ///////////////////////
+
+  case 0x50:
+    //ADR <r>
+    switch (registers.PCB[1]) {
+    case 0:
+      address = registers.registerA + registers.registerA;
+      break;
+    case 1:
+      address = registers.registerA + registers.registerB;
+      break;
+    case 2:
+      address = registers.registerA + registers.registerC;
+      break;
+    case 3:
+      address = registers.registerA + registers.registerX;
+      break;
+    case 4:
+      address = registers.registerA + registers.registerY;
+      break;
+    default:
+      throw std::invalid_argument("Invalid argument to instruction.");
+    }
+    registers.flags.carry = (address > 0xff);
+    registers.registerA = address & 0xff;
+    registers.flags.zero = (registers.registerA == 0);
+    registers.flags.sign = (registers.registerA & 0x80);
+    break;
+  case 0x51:
+    //ADCR <r>
+    switch (registers.PCB[1]) {
+    case 0:
+      address = registers.registerA + registers.registerA + registers.flags.carry;
+      break;
+    case 1:
+      address = registers.registerA + registers.registerB + registers.flags.carry;
+      break;
+    case 2:
+      address = registers.registerA + registers.registerC + registers.flags.carry;
+      break;
+    case 3:
+      address = registers.registerA + registers.registerX + registers.flags.carry;
+      break;
+    case 4:
+      address = registers.registerA + registers.registerY + registers.flags.carry;
+      break;
+    default:
+      throw std::invalid_argument("Invalid argument to instruction.");
+    }
+    registers.flags.carry = (address > 0xff);
+    registers.registerA = address & 0xff;
+    registers.flags.zero = (registers.registerA == 0);
+    registers.flags.sign = (registers.registerA & 0x80);
+    break;
+  case 0x52:
+    //ADV <v>
+    address = registers.registerA + registers.PCB[1];
+    registers.flags.carry = (address > 0xff);
+    registers.registerA = address & 0xff;
+    registers.flags.zero = (registers.registerA == 0);
+    registers.flags.sign = (registers.registerA & 0x80);
+    break;
+  case 0x53:
+    //ADCV <v>
+    address = registers.registerA + registers.PCB[1] + registers.flags.carry;
+    registers.flags.carry = (address > 0xff);
+    registers.registerA = address & 0xff;
+    registers.flags.zero = (registers.registerA == 0);
+    registers.flags.sign = (registers.registerA & 0x80);
+    break;
+  case 0x54:
+    //ADI
+    address = registers.registerA + memory.read((registers.registerX << 8) & registers.registerY);
+    registers.flags.carry = (address > 0xff);
+    registers.registerA = address & 0xff;
+    registers.flags.zero = (registers.registerA == 0);
+    registers.flags.sign = (registers.registerA & 0x80);
+    break;
+  case 0x55:
+    //ADCI
+    address = registers.registerA + memory.read((registers.registerX << 8) & registers.registerY) + registers.flags.carry;
+    registers.flags.carry = (address > 0xff);
+    registers.registerA = address & 0xff;
+    registers.flags.zero = (registers.registerA == 0);
+    registers.flags.sign = (registers.registerA & 0x80);
+    break;
+  case 0x56:
+    //SBR <r>
+    switch (registers.PCB[1]) {
+    case 0:
+      char8 = registers.registerA;
+      break;
+    case 1:
+      char8 = registers.registerB;
+      break;
+    case 2:
+      char8 = registers.registerC;
+      break;
+    case 3:
+      char8 = registers.registerX;
+      break;
+    case 4:
+      char8 = registers.registerY;
+      break;
+    default:
+      throw std::invalid_argument("Invalid argument to instruction.");
+    }
+    address = registers.registerA + !(char8) + 1;
+    registers.flags.carry = (address > 0xff);
+    registers.registerA = address & 0xff;
+    registers.flags.zero = (registers.registerA == 0);
+    registers.flags.sign = (registers.registerA & 0x80);
+    break;
+  case 0x57:
+    //SBCR <r>
+    switch (registers.PCB[1]) {
+    case 0:
+      char8 = registers.registerA;
+      break;
+    case 1:
+      char8 = registers.registerB;
+      break;
+    case 2:
+      char8 = registers.registerC;
+      break;
+    case 3:
+      char8 = registers.registerX;
+      break;
+    case 4:
+      char8 = registers.registerY;
+      break;
+    default:
+      throw std::invalid_argument("Invalid argument to instruction.");
+    }
+    address = registers.registerA + !(char8) + 1 + registers.flags.carry;
+    registers.flags.carry = (address > 0xff);
+    registers.registerA = address & 0xff;
+    registers.flags.zero = (registers.registerA == 0);
+    registers.flags.sign = (registers.registerA & 0x80);
+    break;
+  case 0x58:
+    //SBV <v>
+    address = registers.registerA + !(registers.PCB[1]) + 1;
+    registers.flags.carry = (address > 0xff);
+    registers.registerA = address & 0xff;
+    registers.flags.zero = (registers.registerA == 0);
+    registers.flags.sign = (registers.registerA & 0x80);
+    break;
+  case 0x59:
+    //SBCV <v>
+    address = registers.registerA + !(registers.PCB[1]) + 1 + registers.flags.carry;
+    registers.flags.carry = (address > 0xff);
+    registers.registerA = address & 0xff;
+    registers.flags.zero = (registers.registerA == 0);
+    registers.flags.sign = (registers.registerA & 0x80);
+    break;
+  case 0x5a:
+    //SBI
+    address = registers.registerA + !(memory.read((registers.PCB[1] << 8) & registers.PCB[2])) + 1;
+    registers.flags.carry = (address > 0xff);
+    registers.registerA = address & 0xff;
+    registers.flags.zero = (registers.registerA == 0);
+    registers.flags.sign = (registers.registerA & 0x80);
+    break;
+  case 0x5b:
+    //SBCI
+    address = registers.registerA + !(memory.read((registers.PCB[1] << 8) & registers.PCB[2])) + 1 + registers.flags.carry;
+    registers.flags.carry = (address > 0xff);
+    registers.registerA = address & 0xff;
+    registers.flags.zero = (registers.registerA == 0);
+    registers.flags.sign = (registers.registerA & 0x80);
+    break;
+  case 0x5c:
+    //CMPR <r>
+    switch (registers.PCB[1]) {
+    case 0:
+      char8 = registers.registerA;
+      break;
+    case 1:
+      char8 = registers.registerB;
+      break;
+    case 2:
+      char8 = registers.registerC;
+      break;
+    case 3:
+      char8 = registers.registerX;
+      break;
+    case 4:
+      char8 = registers.registerY;
+      break;
+    default:
+      throw std::invalid_argument("Invalid argument to instruction.");
+    }
+    registers.flags.equal = (char8 == registers.registerA);
+    registers.flags.greater = (char8 > registers.registerA);
+    registers.flags.sign = (registers.registerA-char8) & 0x80;
+    break;
+  case 0x5d:
+    //CMPV <v>
+    char8 = registers.PCB[1];
+    registers.flags.equal = (char8 == registers.registerA);
+    registers.flags.greater = (char8 > registers.registerA);
+    registers.flags.sign = (registers.registerA-char8) & 0x80;
+    break;
+  case 0x5e:
+    //CMPI
+    char8 = memory.read((registers.registerX << 8) & registers.registerY);
+    registers.flags.equal = (char8 == registers.registerA);
+    registers.flags.greater = (char8 > registers.registerA);
+    registers.flags.sign = (registers.registerA-char8) & 0x80;
+    break;
+
+    //////////////////////////
+    //  LOGICAL INSTRUCTIONS
+    //////////////////////////
+
+    ////////////////////////////////
+    //  MISCELLANEOUS INSTRUCTIONS
+    ////////////////////////////////
+
+
+  case 0xff:
+    //HLT
+    break;
+  default:
+    // Invalid opcode
+    throw std::invalid_argument("Error: invalid opcode found");
   }
 }
 
