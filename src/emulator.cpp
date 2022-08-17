@@ -12,6 +12,7 @@ bool Emulator::runCycle() {
   }
   else {
     //otherwise, end cycle
+    return true;  //I'm not sure if this should be here
   }
 
 
@@ -25,7 +26,12 @@ void Emulator::setDrive(std::string name) {
 
 bool Emulator::updateHardware() {
   //check for drive calls
+
   //check for shutdown
+  if(adapterGroup.shutdownBuf == 0xff) {
+    //shutdown
+    return false;
+  }
   //update display
   adapterGroup.displayAdapter.updateDisplay();
   return true;  //false if shutdown

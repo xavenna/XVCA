@@ -9,13 +9,11 @@ void CPU::fetchInsToPCB() {
   registers.PCBPos++;
 }
 
-void CPU::executeInstruction() {
+void CPU::executeInstruction() { //I believe this is done
   uint16_t address = 0;
   char temp8 = 0;
   switch(registers.PCB[0]) {
-    //this needs to be redone for XVCA=-p2
   case 0x0:
-  default:
     //NOP
     //do nothing
     break;
@@ -468,24 +466,24 @@ void CPU::executeInstruction() {
     //SBR <r>
     switch (registers.PCB[1]) {
     case 0:
-      char8 = registers.registerA;
+      temp8 = registers.registerA;
       break;
     case 1:
-      char8 = registers.registerB;
+      temp8 = registers.registerB;
       break;
     case 2:
-      char8 = registers.registerC;
+      temp8 = registers.registerC;
       break;
     case 3:
-      char8 = registers.registerX;
+      temp8 = registers.registerX;
       break;
     case 4:
-      char8 = registers.registerY;
+      temp8 = registers.registerY;
       break;
     default:
       throw std::invalid_argument("Invalid argument to instruction.");
     }
-    address = registers.registerA + !(char8) + 1;
+    address = registers.registerA + !(temp8) + 1;
     registers.flags.carry = (address > 0xff);
     registers.registerA = address & 0xff;
     registers.flags.zero = (registers.registerA == 0);
@@ -495,24 +493,24 @@ void CPU::executeInstruction() {
     //SBCR <r>
     switch (registers.PCB[1]) {
     case 0:
-      char8 = registers.registerA;
+      temp8 = registers.registerA;
       break;
     case 1:
-      char8 = registers.registerB;
+      temp8 = registers.registerB;
       break;
     case 2:
-      char8 = registers.registerC;
+      temp8 = registers.registerC;
       break;
     case 3:
-      char8 = registers.registerX;
+      temp8 = registers.registerX;
       break;
     case 4:
-      char8 = registers.registerY;
+      temp8 = registers.registerY;
       break;
     default:
       throw std::invalid_argument("Invalid argument to instruction.");
     }
-    address = registers.registerA + !(char8) + 1 + registers.flags.carry;
+    address = registers.registerA + !(temp8) + 1 + registers.flags.carry;
     registers.flags.carry = (address > 0xff);
     registers.registerA = address & 0xff;
     registers.flags.zero = (registers.registerA == 0);
@@ -554,40 +552,40 @@ void CPU::executeInstruction() {
     //CMPR <r>
     switch (registers.PCB[1]) {
     case 0:
-      char8 = registers.registerA;
+      temp8 = registers.registerA;
       break;
     case 1:
-      char8 = registers.registerB;
+      temp8 = registers.registerB;
       break;
     case 2:
-      char8 = registers.registerC;
+      temp8 = registers.registerC;
       break;
     case 3:
-      char8 = registers.registerX;
+      temp8 = registers.registerX;
       break;
     case 4:
-      char8 = registers.registerY;
+      temp8 = registers.registerY;
       break;
     default:
       throw std::invalid_argument("Invalid argument to instruction.");
     }
-    registers.flags.equal = (char8 == registers.registerA);
-    registers.flags.greater = (char8 > registers.registerA);
-    registers.flags.sign = (registers.registerA-char8) & 0x80;
+    registers.flags.equal = (temp8 == registers.registerA);
+    registers.flags.greater = (temp8 > registers.registerA);
+    registers.flags.sign = (registers.registerA-temp8) & 0x80;
     break;
   case 0x5d:
     //CMPV <v>
-    char8 = registers.PCB[1];
-    registers.flags.equal = (char8 == registers.registerA);
-    registers.flags.greater = (char8 > registers.registerA);
-    registers.flags.sign = (registers.registerA-char8) & 0x80;
+    temp8 = registers.PCB[1];
+    registers.flags.equal = (temp8 == registers.registerA);
+    registers.flags.greater = (temp8 > registers.registerA);
+    registers.flags.sign = (registers.registerA-temp8) & 0x80;
     break;
   case 0x5e:
     //CMPI
-    char8 = memory.read(registers.XY());
-    registers.flags.equal = (char8 == registers.registerA);
-    registers.flags.greater = (char8 > registers.registerA);
-    registers.flags.sign = (registers.registerA-char8) & 0x80;
+    temp8 = memory.read(registers.XY());
+    registers.flags.equal = (temp8 == registers.registerA);
+    registers.flags.greater = (temp8 > registers.registerA);
+    registers.flags.sign = (registers.registerA-temp8) & 0x80;
     break;
 
     //////////////////////////
@@ -599,38 +597,38 @@ void CPU::executeInstruction() {
     //ORR <r>
     switch (registers.PCB[1]) {
     case 0:
-      char8 = registers.registerA;
+      temp8 = registers.registerA;
       break;
     case 1:
-      char8 = registers.registerB;
+      temp8 = registers.registerB;
       break;
     case 2:
-      char8 = registers.registerC;
+      temp8 = registers.registerC;
       break;
     case 3:
-      char8 = registers.registerX;
+      temp8 = registers.registerX;
       break;
     case 4:
-      char8 = registers.registerY;
+      temp8 = registers.registerY;
       break;
     default:
       throw std::invalid_argument("Invalid argument to instruction.");
     }
-    registers.registerA |= char8;
+    registers.registerA |= temp8;
     registers.flags.zero = (registers.registerA == 0);
     registers.flags.sign = (registers.registerA & 0x80);
     break;
   case 0x71:
     //ORV <v>
-    char8 = registers.PCB[1];
-    registers.registerA |= char8;
+    temp8 = registers.PCB[1];
+    registers.registerA |= temp8;
     registers.flags.zero = (registers.registerA == 0);
     registers.flags.sign = (registers.registerA & 0x80);
     break;
   case 0x72:
     //ORI
-    char8 = memory.read(registers.XY());
-    registers.registerA |= char8;
+    temp8 = memory.read(registers.XY());
+    registers.registerA |= temp8;
     registers.flags.zero = (registers.registerA == 0);
     registers.flags.sign = (registers.registerA & 0x80);
     break;
@@ -638,38 +636,38 @@ void CPU::executeInstruction() {
     //ANDR <r>
     switch (registers.PCB[1]) {
     case 0:
-      char8 = registers.registerA;
+      temp8 = registers.registerA;
       break;
     case 1:
-      char8 = registers.registerB;
+      temp8 = registers.registerB;
       break;
     case 2:
-      char8 = registers.registerC;
+      temp8 = registers.registerC;
       break;
     case 3:
-      char8 = registers.registerX;
+      temp8 = registers.registerX;
       break;
     case 4:
-      char8 = registers.registerY;
+      temp8 = registers.registerY;
       break;
     default:
       throw std::invalid_argument("Invalid argument to instruction.");
     }
-    registers.registerA |= char8;
+    registers.registerA |= temp8;
     registers.flags.zero = (registers.registerA == 0);
     registers.flags.sign = (registers.registerA & 0x80);
     break;
   case 0x74:
     //ANDV <v>
-    char8 = registers.PCB[1];
-    registers.registerA |= char8;
+    temp8 = registers.PCB[1];
+    registers.registerA |= temp8;
     registers.flags.zero = (registers.registerA == 0);
     registers.flags.sign = (registers.registerA & 0x80);
     break;
   case 0x75:
     //ANDI
-    char8 = memory.read(registers.XY());
-    registers.registerA |= char8;
+    temp8 = memory.read(registers.XY());
+    registers.registerA |= temp8;
     registers.flags.zero = (registers.registerA == 0);
     registers.flags.sign = (registers.registerA & 0x80);
     break;
@@ -677,38 +675,38 @@ void CPU::executeInstruction() {
     //XORR <r>
     switch (registers.PCB[1]) {
     case 0:
-      char8 = registers.registerA;
+      temp8 = registers.registerA;
       break;
     case 1:
-      char8 = registers.registerB;
+      temp8 = registers.registerB;
       break;
     case 2:
-      char8 = registers.registerC;
+      temp8 = registers.registerC;
       break;
     case 3:
-      char8 = registers.registerX;
+      temp8 = registers.registerX;
       break;
     case 4:
-      char8 = registers.registerY;
+      temp8 = registers.registerY;
       break;
     default:
       throw std::invalid_argument("Invalid argument to instruction.");
     }
-    registers.registerA |= char8;
+    registers.registerA |= temp8;
     registers.flags.zero = (registers.registerA == 0);
     registers.flags.sign = (registers.registerA & 0x80);
     break;
   case 0x77:
     //XORV <v>
-    char8 = registers.PCB[1];
-    registers.registerA |= char8;
+    temp8 = registers.PCB[1];
+    registers.registerA |= temp8;
     registers.flags.zero = (registers.registerA == 0);
     registers.flags.sign = (registers.registerA & 0x80);
     break;
   case 0x78:
     //XORI
-    char8 = memory.read(registers.XY());
-    registers.registerA |= char8;
+    temp8 = memory.read(registers.XY());
+    registers.registerA |= temp8;
     registers.flags.zero = (registers.registerA == 0);
     registers.flags.sign = (registers.registerA & 0x80);
     break;
@@ -716,38 +714,38 @@ void CPU::executeInstruction() {
     //NOTR <r>
     switch (registers.PCB[1]) {
     case 0:
-      char8 = registers.registerA;
+      temp8 = registers.registerA;
       break;
     case 1:
-      char8 = registers.registerB;
+      temp8 = registers.registerB;
       break;
     case 2:
-      char8 = registers.registerC;
+      temp8 = registers.registerC;
       break;
     case 3:
-      char8 = registers.registerX;
+      temp8 = registers.registerX;
       break;
     case 4:
-      char8 = registers.registerY;
+      temp8 = registers.registerY;
       break;
     default:
       throw std::invalid_argument("Invalid argument to instruction.");
     }
-    registers.registerA |= char8;
+    registers.registerA |= temp8;
     registers.flags.zero = (registers.registerA == 0);
     registers.flags.sign = (registers.registerA & 0x80);
     break;
   case 0x7a:
     //NOTV <v>
-    char8 = registers.PCB[1];
-    registers.registerA |= char8;
+    temp8 = registers.PCB[1];
+    registers.registerA |= temp8;
     registers.flags.zero = (registers.registerA == 0);
     registers.flags.sign = (registers.registerA & 0x80);
     break;
   case 0x7b:
     //NOTI
-    char8 = memory.read(registers.XY());
-    registers.registerA |= char8;
+    temp8 = memory.read(registers.XY());
+    registers.registerA |= temp8;
     registers.flags.zero = (registers.registerA == 0);
     registers.flags.sign = (registers.registerA & 0x80);
     break;
@@ -812,19 +810,113 @@ bool CPU::pcbIsValidIns() {
   }
   else if(registers.PCBPos == 1) {
     switch(registers.PCB[0]) {
-      
+    case 0x00:
+    case 0x10:
+    case 0x11:
+    case 0x12:
+    case 0x13:
+    case 0x14:
+    case 0x1a:
+    case 0x1b:
+    case 0x1c:
+    case 0x1d:
+    case 0x1e:
+    case 0x30:
+    case 0x31:
+    case 0x32:
+    case 0x33:
+    case 0x34:
+    case 0x35:
+    case 0x36:
+    case 0x37:
+    case 0x38:
+    case 0x39:
+    case 0x3a:
+    case 0x3b:
+    case 0x3c:
+    case 0x3d:
+    case 0x3e:
+    case 0x3f:
+    case 0x46:
+    case 0x54:
+    case 0x55:
+    case 0x5a:
+    case 0x5b:
+    case 0x72:
+    case 0x75:
+    case 0x78:
+    case 0x7b:
+    case 0xff:
+      return true;
+    default:
+      return false;
     }
-    
   }
   else if(registers.PCBPos == 2) {
-    
+    switch(registers.PCB[0]) {
+    case 0x01:
+    case 0x02:
+    case 0x03:
+    case 0x04:
+    case 0x05:
+    case 0x06:
+    case 0x07:
+    case 0x08:
+    case 0x09:
+    case 0x0a:
+    case 0x50:
+    case 0x51:
+    case 0x52:
+    case 0x53:
+    case 0x56:
+    case 0x57:
+    case 0x58:
+    case 0x59:
+    case 0x5c:
+    case 0x5d:
+    case 0x70:
+    case 0x71:
+    case 0x73:
+    case 0x74:
+    case 0x76:
+    case 0x77:
+    case 0x79:
+    case 0x7a:
+    case 0x80:
+    case 0x82:
+    case 0x84:
+    case 0x86:
+      return true;
+    default:
+      return false;
+    }
   }
   else if(registers.PCBPos == 3) {
-    
+    switch(registers.PCB[0]) {
+    case 0x0b:
+    case 0x0c:
+    case 0x0d:
+    case 0x0e:
+    case 0x0f:
+    case 0x15:
+    case 0x16:
+    case 0x17:
+    case 0x18:
+    case 0x19:
+    case 0x40:
+    case 0x41:
+    case 0x42:
+    case 0x43:
+    case 0x44:
+    case 0x45:
+    case 0x88:
+      return true;
+    default:
+      return false;
+    }
   }
   return false;
 }
 
 CPU::CPU(AdapterGroup ad) : memory{ad.driveAdapter.driveBuf, ad.displayAdapter.displayBuf, ad.keyboardAdapter.keyboardBuffer, ad.driveAdapter.drcBuf, ad.shutdownBuf} {
-  
 }

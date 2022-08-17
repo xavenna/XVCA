@@ -10,5 +10,6 @@ public:
   DisplayAdapter();
 };
 
+std::string toANSI(char, char);
 
 #endif

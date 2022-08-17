@@ -14,7 +14,7 @@ public:
   FlagRegister flags;
   uint16_t programCounter;
   uint16_t stackPointer;
-  char PCB[4];  //this may need to be longer
+  uint8_t PCB[4];  //this may need to be longer
   unsigned PCBPos;  //where next fetched instruction goes
   void clearPCB();
   uint16_t XY();

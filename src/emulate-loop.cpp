@@ -2,8 +2,6 @@
 #include <string>
 #include <fstream>
 
-#include <curses.h>
-
 
 #include "emulator.h"
 #include "drive.h"
@@ -20,14 +18,12 @@ int beginEmulation(std::string targetDriveName) {
   Emulator emulator;
   emulator.setDrive(targetDriveName);
 
-  initscr();  //set up ncurses window
+  std::cout << "\x1b[=1h";
 
   while(true) {
     if(!emulator.runCycle())
       break;
   }
 
-  endwin();  //cleanup ncurses
-  
   return 0;  //assuming everything goes well
 }
