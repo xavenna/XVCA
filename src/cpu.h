@@ -1,5 +1,8 @@
 #ifndef CPU_H
 #define CPU_H
+
+#include <stdexcept>
+
 #include "memory-group.h"
 #include "register-group.h"
 #include "adapter-group.h"

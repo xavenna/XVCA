@@ -10,7 +10,7 @@ void CPU::fetchInsToPCB() {
 }
 
 void CPU::executeInstruction() {
-  uint16_t address;
+  uint16_t address = 0;
   switch(registers.PCB[0]) {
     //this needs to be redone for XVCA=-p2
   case 0x0:
@@ -189,6 +189,195 @@ void CPU::executeInstruction() {
     //MVIY
     registers.registerY = memory.read((registers.registerX << 8) & registers.registerY);
     break;
+  case 0x15:
+    //MVAM <a>
+    memory.write((registers.PCB[1] << 8) & registers.PCB[2], registers.registerA);
+    break;
+  case 0x16:
+    //MVBM <a>
+    memory.write((registers.PCB[1] << 8) & registers.PCB[2], registers.registerB);
+    break;
+  case 0x17:
+    //MVCM <a>
+    memory.write((registers.PCB[1] << 8) & registers.PCB[2], registers.registerC);
+    break;
+  case 0x18:
+    //MVXM <a>
+    memory.write((registers.PCB[1] << 8) & registers.PCB[2], registers.registerX);
+    break;
+  case 0x19:
+    //MVYM <a>
+    memory.write((registers.PCB[1] << 8) & registers.PCB[2], registers.registerY);
+    break;
+  case 0x1a:
+    //MVAI
+    memory.write((registers.registerX << 8) & registers.registerY, registers.registerA);
+    break;
+  case 0x1b:
+    //MVBI
+    memory.write((registers.registerX << 8) & registers.registerY, registers.registerB);
+    break;
+  case 0x1c:
+    //MVCI
+    memory.write((registers.registerX << 8) & registers.registerY, registers.registerC);
+    break;
+  case 0x1d:
+    //MVXI
+    memory.write((registers.registerX << 8) & registers.registerY, registers.registerX);
+    break;
+  case 0x1e:
+    //MVYI
+    memory.write((registers.registerX << 8) & registers.registerY, registers.registerY);
+    break;
+
+    //////////////////////
+    //  STACK OPERATIONS
+    //////////////////////
+  case 0x30:
+    //PUSH A
+    registers.stackPointer--;
+    memory.write(registers.stackPointer, registers.registerA);
+    break;
+  case 0x31:
+    //PUSH B
+    registers.stackPointer--;
+    memory.write(registers.stackPointer, registers.registerB);
+    break;
+  case 0x32:
+    //PUSH C
+    registers.stackPointer--;
+    memory.write(registers.stackPointer, registers.registerC);
+    break;
+  case 0x33:
+    //PUSH X
+    registers.stackPointer--;
+    memory.write(registers.stackPointer, registers.registerX);
+    break;
+  case 0x34:
+    //PUSH Y
+    registers.stackPointer--;
+    memory.write(registers.stackPointer, registers.registerY);
+    break;
+  case 0x35:
+    //PUSH F
+    registers.stackPointer--;
+    memory.write(registers.stackPointer, registers.flags.reg());
+    break;
+  case 0x36:
+    //POP A
+    registers.registerA = memory.read(registers.stackPointer);
+    registers.stackPointer++;
+    break;
+  case 0x37:
+    //POP B
+    registers.registerB = memory.read(registers.stackPointer);
+    registers.stackPointer++;
+    break;
+  case 0x38:
+    //POP C
+    registers.registerC = memory.read(registers.stackPointer);
+    registers.stackPointer++;
+    break;
+  case 0x39:
+    //POP X
+    registers.registerX = memory.read(registers.stackPointer);
+    registers.stackPointer++;
+    break;
+  case 0x3a:
+    //POP Y
+    registers.registerY = memory.read(registers.stackPointer);
+    registers.stackPointer++;
+    break;
+  case 0x3b:
+    //POP F
+    registers.flags.assignReg(memory.read(registers.stackPointer));
+    registers.stackPointer++;
+    break;
+  case 0x3c:
+    //PUSH SP
+    registers.stackPointer--;
+    memory.write(registers.stackPointer, (registers.stackPointer >> 8) & 0xff);
+    registers.stackPointer--;
+    memory.write(registers.stackPointer, registers.stackPointer & 0xff);
+    break;
+  case 0x3d:
+    //PUSH PC
+    registers.stackPointer--;
+    memory.write(registers.stackPointer, (registers.programCounter >> 8) & 0xff);
+    registers.stackPointer--;
+    memory.write(registers.stackPointer, registers.programCounter & 0xff);
+    break;
+  case 0x3e:
+    //POP SP
+    address = memory.read(registers.stackPointer) << 8;
+    registers.stackPointer++;
+    address = address & memory.read(registers.stackPointer);
+    registers.stackPointer++;
+    registers.stackPointer = address;
+    break;
+  case 0x3f:
+    //POP PC
+    registers.programCounter = memory.read(registers.stackPointer) << 8;
+    registers.stackPointer++;
+    registers.programCounter = registers.stackPointer & memory.read(registers.stackPointer);
+    registers.stackPointer++;
+    break;
+
+
+    ////////////////////////
+    // BRANCH INSTRUCTIONS
+    ////////////////////////
+  case 0x40:
+    //JMP <a>
+    registers.programCounter = (registers.PCB[1] << 8) & registers.PCB[2];
+    break;
+  case 0x41:
+    //JZ <a>
+    if(registers.flags.zero) {
+      registers.programCounter = (registers.PCB[1] << 8) & registers.PCB[2];
+    }
+    break;
+  case 0x42:
+    //JNZ <a>
+    if(!registers.flags.zero) {
+      registers.programCounter = (registers.PCB[1] << 8) & registers.PCB[2];
+    }
+    break;
+  case 0x43:
+    //JE <a>
+    if(registers.flags.equal) {
+      registers.programCounter = (registers.PCB[1] << 8) & registers.PCB[2];
+    }
+    break;
+  case 0x44:
+    //JNE <a>
+    if(!registers.flags.equal) {
+      registers.programCounter = (registers.PCB[1] << 8) & registers.PCB[2];
+    }
+    break;
+  case 0x45:
+    //CALL <a>
+    //push programCounter to stack
+    registers.programCounter++;
+    registers.stackPointer--;
+    memory.write(registers.stackPointer, (registers.programCounter >> 8) & 0xff);
+    registers.stackPointer--;
+    memory.write(registers.stackPointer, registers.programCounter & 0xff);
+    //jump to argument
+    registers.programCounter = (registers.PCB[1] << 8) & registers.PCB[2];
+    break;
+  case 0x46:
+    //RET
+    //pop programCounter from stack
+    registers.programCounter = memory.read(registers.stackPointer) << 8;
+    registers.stackPointer++;
+    registers.programCounter = registers.stackPointer & memory.read(registers.stackPointer);
+    registers.stackPointer++;
+    break;
+
+    ///////////////////////
+    // ARITHMETIC OPCODES
+    ///////////////////////
   }
 }
 

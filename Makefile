@@ -32,7 +32,7 @@ OBJS:=$(patsubst src/%.cpp, $(OBJ_DIR)/%.o, $(SRCS))
 
 ASMOBJS := $(addprefix $(OBJ_DIR)/,assembler.o util.o assembler-util.o file-utils.o)
 
-XVOBJS = $(addprefix $(OBJ_DIR)/,emulator.o xvca.o util.o cpu.o register-group.o display-adapter.o file-utils.o emulate-loop.o drive.o memory-group.o)
+XVOBJS = $(addprefix $(OBJ_DIR)/,emulator.o xvca.o util.o cpu.o register-group.o display-adapter.o file-utils.o emulate-loop.o drive.o memory-group.o flags.o)
 
 DROBJS = $(addprefix $(OBJ_DIR)/,drivemgr.o util.o file-utils.o drive.o encoding.o)
 

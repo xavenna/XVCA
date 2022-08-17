@@ -2,6 +2,8 @@
 #define REGISTER_GROUP_H
 #include <cstdint>
 
+#include "flags.h"
+
 class RegisterGroup {
 public:
   char registerA;
@@ -9,6 +11,7 @@ public:
   char registerC;
   char registerX;
   char registerY;
+  FlagRegister flags;
   uint16_t programCounter;
   uint16_t stackPointer;
   char PCB[4];  //this may need to be longer
