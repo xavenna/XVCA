@@ -28,12 +28,15 @@ bool Emulator::updateHardware() {
   //check for drive calls
 
   //check for shutdown
-  if(adapterGroup.shutdownBuf == 0xff) {
+  if((uint8_t)adapterGroup.shutdownBuf.buffer == 0xff) {
     //shutdown
     return false;
   }
-  //update display
+  //udate display
   adapterGroup.displayAdapter.updateDisplay();
+  //update keyboard
+  adapterGroup.keyboardAdapter.updateBuffer();
+  //check if key is pressed
   return true;  //false if shutdown
 }
 

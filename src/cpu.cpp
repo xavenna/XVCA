@@ -483,7 +483,7 @@ void CPU::executeInstruction() { //I believe this is done
     default:
       throw std::invalid_argument("Invalid argument to instruction.");
     }
-    address = registers.registerA + !(temp8) + 1;
+    address = registers.registerA + ~(temp8) + 1;
     registers.flags.carry = (address > 0xff);
     registers.registerA = address & 0xff;
     registers.flags.zero = (registers.registerA == 0);
@@ -510,7 +510,7 @@ void CPU::executeInstruction() { //I believe this is done
     default:
       throw std::invalid_argument("Invalid argument to instruction.");
     }
-    address = registers.registerA + !(temp8) + 1 + registers.flags.carry;
+    address = registers.registerA + ~(temp8) + 1 + registers.flags.carry;
     registers.flags.carry = (address > 0xff);
     registers.registerA = address & 0xff;
     registers.flags.zero = (registers.registerA == 0);
@@ -518,7 +518,7 @@ void CPU::executeInstruction() { //I believe this is done
     break;
   case 0x58:
     //SBV <v>
-    address = registers.registerA + !(registers.PCB[1]) + 1;
+    address = registers.registerA + ~(registers.PCB[1]) + 1;
     registers.flags.carry = (address > 0xff);
     registers.registerA = address & 0xff;
     registers.flags.zero = (registers.registerA == 0);
@@ -526,7 +526,7 @@ void CPU::executeInstruction() { //I believe this is done
     break;
   case 0x59:
     //SBCV <v>
-    address = registers.registerA + !(registers.PCB[1]) + 1 + registers.flags.carry;
+    address = registers.registerA + ~(registers.PCB[1]) + 1 + registers.flags.carry;
     registers.flags.carry = (address > 0xff);
     registers.registerA = address & 0xff;
     registers.flags.zero = (registers.registerA == 0);
@@ -534,7 +534,7 @@ void CPU::executeInstruction() { //I believe this is done
     break;
   case 0x5a:
     //SBI
-    address = registers.registerA + !(memory.read(registers.XY())) + 1;
+    address = registers.registerA + ~(memory.read(registers.XY())) + 1;
     registers.flags.carry = (address > 0xff);
     registers.registerA = address & 0xff;
     registers.flags.zero = (registers.registerA == 0);
@@ -542,7 +542,7 @@ void CPU::executeInstruction() { //I believe this is done
     break;
   case 0x5b:
     //SBCI
-    address = registers.registerA + !(memory.read(registers.XY())) + 1 + registers.flags.carry;
+    address = registers.registerA + ~(memory.read(registers.XY())) + 1 + registers.flags.carry;
     registers.flags.carry = (address > 0xff);
     registers.registerA = address & 0xff;
     registers.flags.zero = (registers.registerA == 0);
