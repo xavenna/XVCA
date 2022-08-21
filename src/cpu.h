@@ -3,7 +3,6 @@
 
 #include <stdexcept>
 
-#include "debug.h"
 #include "memory-group.h"
 #include "register-group.h"
 #include "adapter-group.h"

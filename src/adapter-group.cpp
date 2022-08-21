@@ -3,5 +3,4 @@
 
 
 AdapterGroup::AdapterGroup() {
-  std::cout << "adapterGroup\n";
 }

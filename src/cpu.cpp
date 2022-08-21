@@ -5,15 +5,18 @@
 
 
 
-void CPU::fetchInsToPCB() {
+void CPU::fetchInsToPCB() {  //doesn't worm
   char temp = memory.read(registers.programCounter);
+  std::cout << registers.PCBPos << ',' << std::hex << +(uint8_t)temp << std::dec << '\n';
   registers.PCB[registers.PCBPos] = temp;
   registers.PCBPos++;
+  registers.programCounter++;
 }
 
 void CPU::executeInstruction() { //I believe this is done
 #ifdef XV_DEBUG
-  std::cout << "Executing instruction " << +registers.PCB[0] << ".\n";
+  std::cout << "Executing instruction " << std::hex << +registers.PCB[0]
+	    << std::dec << ".\n";
   std::ofstream name;
   name.open("./xv.log", std::ios::app);
   name << "Executing instruction " << +registers.PCB[0] << ".\n";

@@ -11,7 +11,7 @@ bool KeyboardAdapter::updateBuffer() {
   do {
     read(STDIN_FILENO, &c, 1);
 #ifdef XV_DEBUG
-    std::cout << +c << "\n";
+    //std::cout << +c << "\n";
 #endif
     if(c == 0x03) {
       //C-c: interrupt, shutdown

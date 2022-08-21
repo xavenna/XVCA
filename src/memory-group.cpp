@@ -1,5 +1,4 @@
 #include "memory-group.h"
-#include "debug.h"
 
 void MemoryGroup::write(uint16_t address, char data) {
   if(address < 62464) {
@@ -62,7 +61,20 @@ char MemoryGroup::read(uint16_t address) {
   return temp;
 }
 
+bool MemoryGroup::readBlock(uint16_t addr, char* buffer, unsigned len) {
+  for(unsigned i=0;i<len;i++) {
+    buffer[i] = read(addr+i);
+  }
+  return true; //can return false if fail
+}
+
+bool MemoryGroup::writeBlock(uint16_t addr, const char* buffer, unsigned len) {
+  for(unsigned i=0;i<len;i++) {
+    write(addr+i, buffer[i]);
+  }
+  return true; //can return false if fail
+}
 
 MemoryGroup::MemoryGroup(DriveBuffer* db, DisplayBuffer* dsb, KeyboardBuffer* kb, DriveCommandBuffer* dbc, ShutdownBuffer* sb) : driveBuf{*db}, dispBuf{*dsb}, keyBuf{*kb}, drcBuf{*dbc}, shutdownBuf{*sb} {
-  std::cout << "mem\n";
+
 }

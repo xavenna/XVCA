@@ -1,7 +1,6 @@
 # This makefile was created with help from the following stackoverflow answer:
 # https://stackoverflow.com/a/23418196
 
-LLIB = -lncurses
 CXX = g++
 CPPFLAGS = -Wall -Wextra -fexceptions -std=c++17
 
@@ -53,7 +52,7 @@ $(DREXE): $(DROBJS)
 	$(CXX) $(LFLAGS) -o $@ $^
 
 $(XVEXE): $(XVOBJS)
-	$(CXX) $(LFLAGS) -o $@ $^ $(LLIB)
+	$(CXX) $(LFLAGS) -o $@ $^
 
 $(OBJ_DIR)/%.o: src/%.cpp
 	@$(CXX) -MM -MP -MT $(df).o -MT $(df).d $(CPPFLAGS) $< > $(df).d

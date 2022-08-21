@@ -4,6 +4,7 @@ void RegisterGroup::clearPCB() {
   for(int i=0;i<4;i++) {
     PCB[i] = 0;
   }
+  PCBPos = 0;
 }
 
 uint16_t RegisterGroup::XY() {

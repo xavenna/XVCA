@@ -5,10 +5,14 @@
 bool Emulator::runCycle() {
   //fetch instruction from memory at program counter into PCB
   cpu.fetchInsToPCB();
+  //for some reason, it always fetches a NOP
+  //now it segfaults instead
+  
   //check if PCB contains a complete command
   if(cpu.pcbIsValidIns()) {
     //if so, execute it
     cpu.executeInstruction();
+    cpu.registers.clearPCB();
   }
   else {
     //otherwise, end cycle
@@ -44,7 +48,6 @@ bool Emulator::updateHardware() {
 }
 
 Emulator::Emulator() : cpu{adapterGroup} {
-  std::cout << "emulator\n";
 }
 
 Emulator::Emulator(AdapterGroup& ag) : adapterGroup{ag}, cpu{ag}  {
