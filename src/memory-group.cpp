@@ -1,7 +1,8 @@
 #include "memory-group.h"
+#include "debug.h"
 
 void MemoryGroup::write(uint16_t address, char data) {
-  if(address >= 0 && address < 62464) {
+  if(address < 62464) {
     primaryMemory[address] = data;
   }
   else if(address >= 62464 && address < 63488) {
@@ -30,7 +31,7 @@ void MemoryGroup::write(uint16_t address, char data) {
 }
 char MemoryGroup::read(uint16_t address) {
   char temp;
-  if(address >= 0 && address < 62464) {
+  if(address < 62464) {
     temp = primaryMemory[address];
   }
   else if(address >= 62464 && address < 63488) {
@@ -48,6 +49,8 @@ char MemoryGroup::read(uint16_t address) {
   else if(address >= 65496 && address < 65504) {
     //drive command buffer
     //write-only
+    //actually, no, arguments...
+    temp = keyBuf.buffer[address-65496];
   }
   else if(address == 65535) {
     //shutdown buffer
@@ -58,6 +61,8 @@ char MemoryGroup::read(uint16_t address) {
   }
   return temp;
 }
-MemoryGroup::MemoryGroup(DriveBuffer db, DisplayBuffer dsb, KeyboardBuffer kb, DriveCommandBuffer dbc, ShutdownBuffer sb) : driveBuf{db}, dispBuf{dsb}, keyBuf{kb}, drcBuf{dbc}, shutdownBuf{sb} {
-  
+
+
+MemoryGroup::MemoryGroup(DriveBuffer* db, DisplayBuffer* dsb, KeyboardBuffer* kb, DriveCommandBuffer* dbc, ShutdownBuffer* sb) : driveBuf{*db}, dispBuf{*dsb}, keyBuf{*kb}, drcBuf{*dbc}, shutdownBuf{*sb} {
+  std::cout << "mem\n";
 }

@@ -15,35 +15,24 @@
 
 int main(int argc, char** argv) {
 
-
-  bool helpMode = false;
-  std::string targetDrive;
-  for(int i=0;i<argc;i++) {
-    
-    std::string arg(argv[i]);  //this makes it easier to work with, and also I don't really like cstrings
+  if(argc == 1) {
+    std::cout << "Error: no arguments supplied. Use '" << argv[0]
+	      << " -h' for usage information.\n";
+  }
+  else if(argc == 2) {
+    std::string arg(argv[1]);
     if(arg == "-h") {
-      helpMode = true;
-    }
-    else if(arg.substr(0,2) == "-d") {
-      if(arg.size() < 3) {
-	std::cout << "Error: invalid usage of '-d' flag\n";
-	return 1;
-      }
-      targetDrive = arg.substr(2);
-      if(!isValidDriveName(targetDrive)) {
-	std::cout << "Error: '" << targetDrive << "' is not a valid drive name.\n";
-	return 1;
-      }
+      //help
+      std::cout << "XVCA VM: initial version.\n";
+      std::cout << "usage: " << argv[0] << " [-h] -d<drivename>\n";
     }
     else {
-      std::cout << "Error: invalid argument.\n";
-      return 1;
+      if(!isValidDriveName(arg)) {
+	std::cout << "Error: '" << arg << "' is not a valid drive name.\n";
+	return 1;
+      }
+      //attempt to run the thingy as a drive
+      return beginEmulation(arg);
     }
   }
-
-  if(helpMode) {
-    std::cout << "XVCA VM: initial version.\n";
-    std::cout << "usage: " << argv[0] << " [-h] -d<drivename>\n";
-  }
-  return beginEmulation(targetDrive);
 }

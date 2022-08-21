@@ -20,7 +20,9 @@ int beginEmulation(std::string targetDriveName) {
     return 1;
   }
 
-  Emulator emulator;
+
+  AdapterGroup ag;
+  Emulator emulator(ag);
   emulator.setDrive(targetDriveName);
 
   initializeTerm();
@@ -28,13 +30,16 @@ int beginEmulation(std::string targetDriveName) {
   while(true) {
     if(!emulator.runCycle())
       break;
+    //add debugging thingies
   }
+
 
   return 0;  //assuming everything goes well
 }
 
 void initializeTerm() {
-  std::cout << "\x1b[=1h";
+  std::cout << "\x1b[2J\x1b[=1h\x1b[H";  //prepare screen
+
   //enable raw mode
   tcgetattr(STDIN_FILENO, &orig_termios);
   atexit(resetTerm);
@@ -44,6 +49,8 @@ void initializeTerm() {
   raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
   raw.c_cflag |= (CS8);
   raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
+  raw.c_cc[VMIN] = 0;
+  raw.c_cc[VTIME] = 1;
 
   tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 }

@@ -13,6 +13,7 @@ public:
   DriveAdapter driveAdapter;
   KeyboardAdapter keyboardAdapter;
   ShutdownBuffer shutdownBuf;
+  AdapterGroup();
 };
 
 #endif

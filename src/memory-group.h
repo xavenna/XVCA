@@ -5,7 +5,6 @@
 class DriveBuffer {
 public:
   char buffer[1024];  
-  //I don't think this really needs to do much, the driveAdapter does most of the hard work
 };
 
 class DisplayBuffer {
@@ -40,7 +39,7 @@ class MemoryGroup {
 public:
   void write(uint16_t, char);
   char read(uint16_t);
-  MemoryGroup(DriveBuffer, DisplayBuffer, KeyboardBuffer, DriveCommandBuffer, ShutdownBuffer);
+  MemoryGroup(DriveBuffer*, DisplayBuffer*, KeyboardBuffer*, DriveCommandBuffer*, ShutdownBuffer*);
 };
 
 #endif

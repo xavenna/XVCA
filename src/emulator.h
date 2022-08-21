@@ -13,13 +13,14 @@
 
 class Emulator {
 public:
-  CPU cpu;
   AdapterGroup adapterGroup;
+  CPU cpu;
   std::string driveName;
   
   void setDrive(std::string);
   bool updateHardware();
   bool runCycle();
   Emulator();
+  Emulator(AdapterGroup&);
 };
 #endif

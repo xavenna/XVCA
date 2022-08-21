@@ -1,16 +1,29 @@
 #include "keyboard-adapter.h"
+#include <unistd.h>
+#include <iostream>
 
 
-void KeyboardAdapter::updateBuffer() {
-  int c;
+bool KeyboardAdapter::updateBuffer() {
+  //THIS DOESN"T WORK, REWRITE
+  //std::cout << "updating buffer\n";
+  char c = 0;
   std::string buf;
   do {
-    c = getchar();
-    if(c != EOF) {
+    read(STDIN_FILENO, &c, 1);
+#ifdef XV_DEBUG
+    std::cout << +c << "\n";
+#endif
+    if(c == 0x03) {
+      //C-c: interrupt, shutdown
+      return false;
+    }
+    if(c != 0x0) {
       buf += c;
     }
-    else {
+    else { //no input
       c = 0;
+      //clear buffer
+      buf = "\0\0\0\0\0\0\0\0\0";
       break;
     }
     if(buf[0] != 0x1b) {
@@ -26,9 +39,12 @@ void KeyboardAdapter::updateBuffer() {
 	//unrecognized escape, break and empty string
       }
     }
+    //std::cout << "end of loop\n";
   }while(true);
   //pad string with null characters, if necessary
-  std::string pad(0x0, buf.size() < 8 ? 8-buf.size() : 1);
-  buf += pad;
+  for(int i=0;i<8;i++) {
+    buf += '\0';
+  }
   memcpy(keyboardBuffer.buffer, buf.c_str(), 8);
+  return true;
 }

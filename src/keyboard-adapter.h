@@ -9,7 +9,7 @@
 class KeyboardAdapter {
 public:
   KeyboardBuffer keyboardBuffer;
-  void updateBuffer();
+  bool updateBuffer();
 };
 
 

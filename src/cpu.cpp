@@ -1,5 +1,7 @@
 #include "cpu.h"
 #include "emulator.h"
+#include <iostream>
+#include <fstream>
 
 
 
@@ -10,6 +12,13 @@ void CPU::fetchInsToPCB() {
 }
 
 void CPU::executeInstruction() { //I believe this is done
+#ifdef XV_DEBUG
+  std::cout << "Executing instruction " << +registers.PCB[0] << ".\n";
+  std::ofstream name;
+  name.open("./xv.log", std::ios::app);
+  name << "Executing instruction " << +registers.PCB[0] << ".\n";
+  name.close();
+#endif
   uint16_t address = 0;
   char temp8 = 0;
   switch(registers.PCB[0]) {
@@ -918,5 +927,6 @@ bool CPU::pcbIsValidIns() {
   return false;
 }
 
-CPU::CPU(AdapterGroup ad) : memory{ad.driveAdapter.driveBuf, ad.displayAdapter.displayBuf, ad.keyboardAdapter.keyboardBuffer, ad.driveAdapter.drcBuf, ad.shutdownBuf} {
+CPU::CPU(AdapterGroup ad) : memory{&ad.driveAdapter.driveBuf, &ad.displayAdapter.displayBuf, &ad.keyboardAdapter.keyboardBuffer, &ad.driveAdapter.drcBuf, &ad.shutdownBuf} {
+
 }
