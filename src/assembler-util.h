@@ -9,7 +9,7 @@ int transformLineToMachineCode(std::vector<char>&, std::string, std::map<int, st
 bool writeMachineCodeToFile(std::vector<char>&, std::string);
 void createHeader(std::vector<char>&, std::vector<char>&, uint16_t);
 
-bool fixLabelJumpPoints(std::vector<char>&, std::map<std::string, int>&, std::map<int, std::string>, std::vector<int>); 
+bool fixLabelJumpPoints(std::vector<char>&, std::map<std::string, int>&, std::map<int, std::string>, std::vector<int>, const unsigned); 
 
 bool isReg(char);
 char regToNum(char);

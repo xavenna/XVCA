@@ -1389,7 +1389,7 @@ bool writeMachineCodeToFile(std::vector<char>& machineCode, std::string filename
   return true;
 }
 
-bool fixLabelJumpPoints(std::vector<char>& machineCode, std::map<std::string, int>& labelHash, std::map<int, std::string> jumpTable, std::vector<int> codesPerLine) {
+bool fixLabelJumpPoints(std::vector<char>& machineCode, std::map<std::string, int>& labelHash, std::map<int, std::string> jumpTable, std::vector<int> codesPerLine, const unsigned offset) {
   //machineCode contains the unfinished machine code for the program.
   //labelHash contains a list of which line of code each label corresponds to
   //jumpTable contains a list of where a label is needed (in machine code), and which label is needed there
@@ -1422,7 +1422,7 @@ bool fixLabelJumpPoints(std::vector<char>& machineCode, std::map<std::string, in
 	return false;
       }
       int relativeAddress = labelHash.find(x.second)->second;  //add exception handling here, as an undefined label will currently cause a crash
-      int absoluteAddress = relativeAddress + 0x1000;  //0x1000 is the program loading point, and thus the location of the first byte of machine code
+      int absoluteAddress = relativeAddress + offset;  //offset is the location of the first byte of machine code and thus the location of the first byte of machine code
       machineCode[x.first] = (absoluteAddress & 0xff00) >> 8;
       machineCode[x.first+1] = absoluteAddress & 0xff;
       

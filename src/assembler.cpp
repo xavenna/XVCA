@@ -10,7 +10,7 @@
 
 /* This is the main file for the XVCA Assembler. Eventually, the goal is to make an assembler that runs on XVCA
  * For now, though, it is written in c++
- * This version targets the XVCA-P1.1r version of the instruction set
+ * This version targets the XVCA-P2 version of the instruction set
 
  * Arguments:
  * -h: display help
@@ -19,28 +19,85 @@
 
 int main(int argc, char** argv) {
   //parse arguments
+  std::string infile;
+  std::string outfile;
+  unsigned jumpPoint = 0x1000;
+  bool generateJumpTable = false;
+  bool help = false;
+  bool makeHeader = true;
   if(argc == 1) {
     std::cout << "Error: No arguments supplied. Use '" << argv[0] << " -h' for help\n";
     return 1;
   }
-  else if(argc == 2) {
-    if(std::string(argv[1]) == "-h") {
-      //display help message
-      std::cout << "XVCA Assembler: version Test0.0\n";
-      std::cout << "Usage: " << argv[0] << " <input file> <output file>\n";
+  for(int i=1;i<argc;i++) {
+    std::string arg(argv[i]);
+
+    if(arg.substr(0,2) == "-i") {
+      //inputfile
+      if(arg.size() > 2) {
+	infile = arg.substr(2);
+      }
+      else {
+	std::cout << "Error: flag '-i' requires an argument.\n";
+	return 1;
+      }
+    }
+    else if(arg.substr(0,2) == "-o") {
+      //outfile
+      if(arg.size() > 2) {
+	outfile = arg.substr(2);
+      }
+      else {
+	std::cout << "Error: flag '-o' requires an argument.\n";
+	return 1;
+      }
+    }
+    else if(arg.substr(0,2) == "-j") {
+      //jump point
+      if(arg.size() > 2) {
+	try {
+	  jumpPoint = std::stoul(arg.substr(2));
+	}
+	catch (...) {
+	  std::cout << "Error: flag '-j' requires a numeric argument.\n";
+	  return 1;
+	}
+      }
+      else {
+	std::cout << "Error: flag '-j' requires an argument.\n";
+	return 1;
+      }
+    }
+    else if(arg == "-g") {
+      //generate a jump table
+      generateJumpTable = true;
+    }
+    else if(arg == "-n") {
+      //don't create a header
+      makeHeader = false;
+    }
+    else if(arg == "-h") {
+      //display help
+      help = true;
     }
     else {
-      //error
+      std::cout << "Error: unrecognized argument '" << arg << "'\n";
+      return 1;
     }
+    
   }
-  else if(argc == 3) {
-      //attempt to assemble second argument into third argument
-    if(!assemble(argv[1], argv[2])) {
-      std::cout << "Error: specified file could not be assembled.\n";
-      //error
-    }
-    else {
-      //success
+  //now, do things
+  if(help) {
+    //display help
+    std::cout << "XVCA Assembler: version Test0.0\n";
+    std::cout << "Usage: " << argv[0] << " <input file> <output file>\n";
+    std::cout << "TODO: Update help menu, it is outdated\n";
+  }
+  else if(!infile.empty() && !outfile.empty()) {
+    //assemble
+    if(!assemble(infile, outfile, jumpPoint, generateJumpTable, makeHeader)) {
+      std::cout << "Assembly failed.\n";
+      return 1;
     }
   }
   else {
@@ -48,7 +105,7 @@ int main(int argc, char** argv) {
   }
 }
 
-bool assemble(std::string filename, std::string outfile) {
+bool assemble(std::string filename, std::string outfile, unsigned addrOff, bool makeJumpTable, bool header) {
   std::ifstream get(filename);
   std::string line;
   std::vector<std::string> lines;  //all lines in program
@@ -62,16 +119,12 @@ bool assemble(std::string filename, std::string outfile) {
   }
   //prepare header
   int counter = 0;
-  std::getline(get, line);
-  bool header = (line != "#NOHEADER");  //check if NOHEADER is set
-  if(line.at(0) == '#') {  //if line is a directive
-
-  }
-  else {
-    get.seekg(0);
-  }
   while(get.peek() != EOF) {
     std::getline(get, line);
+    if(line == "#NOHEADER") {
+      std::cout << "Error: the noheader directive is no longer supported. Use the '-n' flag instead.\n";
+      return false;
+    }
     if(line.size() <= 1) {
       //line is empty, disregard
     }
@@ -98,7 +151,7 @@ bool assemble(std::string filename, std::string outfile) {
     codesPerLine.push_back(value);
   }
 
-  fixLabelJumpPoints(machineCode, labelHash, jumpHash, codesPerLine);
+  fixLabelJumpPoints(machineCode, labelHash, jumpHash, codesPerLine, addrOff);
   //TODO: Make fixLabelJumpPoints able to create a label table (e.g. for syscalls or driver functions)
 
   //jumpHash: {address location in bytecode, target label}
@@ -109,7 +162,7 @@ bool assemble(std::string filename, std::string outfile) {
   }
   std::vector<char> newMachineCode;
   if(header) {
-    int jump = jumpPoint->second + 0x1000;  //0x1000 is the offset
+    int jump = jumpPoint->second + addrOff;
     createHeader(machineCode, newMachineCode, jump);  //create header
     writeMachineCodeToFile(newMachineCode, outfile);
   }
