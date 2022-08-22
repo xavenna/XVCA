@@ -8,7 +8,23 @@ void RegisterGroup::clearPCB() {
 }
 
 uint16_t RegisterGroup::XY() {
-  return (registerX << 8) & registerY;
+  return (registerX << 8) | registerY;
+}
+void RegisterGroup::decSP() {
+  if(stackPointer == 0) {
+    stackPointer = 65535;
+  }
+  else {
+    stackPointer--;
+  }
+}
+void RegisterGroup::incSP() {
+  if(stackPointer == 65535) {
+    stackPointer = 0;
+  }
+  else {
+    stackPointer++;
+  }
 }
 RegisterGroup::RegisterGroup() {
   registerA = 0;

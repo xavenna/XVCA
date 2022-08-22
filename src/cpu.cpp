@@ -7,7 +7,7 @@
 
 void CPU::fetchInsToPCB() {  //doesn't worm
   char temp = memory.read(registers.programCounter);
-  std::cout << registers.PCBPos << ',' << std::hex << +(uint8_t)temp << std::dec << '\n';
+  std::cout << std::hex << registers.programCounter << ',' << +(uint8_t)temp << std::dec << '\n';
   registers.PCB[registers.PCBPos] = temp;
   registers.PCBPos++;
   registers.programCounter++;
@@ -162,23 +162,23 @@ void CPU::executeInstruction() { //I believe this is done
     break;
   case 0xb:
     //MVMA <a>
-    registers.registerA = memory.read((registers.PCB[1] << 8) & registers.PCB[2]);
+    registers.registerA = memory.read((registers.PCB[1] << 8) | registers.PCB[2]);
     break;
   case 0xc:
     //MVMB <a>
-    registers.registerB = memory.read((registers.PCB[1] << 8) & registers.PCB[2]);
+    registers.registerB = memory.read((registers.PCB[1] << 8) | registers.PCB[2]);
     break;
   case 0xd:
     //MVMC <a>
-    registers.registerC = memory.read((registers.PCB[1] << 8) & registers.PCB[2]);
+    registers.registerC = memory.read((registers.PCB[1] << 8) | registers.PCB[2]);
     break;
   case 0xe:
     //MVMX <a>
-    registers.registerX = memory.read((registers.PCB[1] << 8) & registers.PCB[2]);
+    registers.registerX = memory.read((registers.PCB[1] << 8) | registers.PCB[2]);
     break;
   case 0xf:
     //MVMY <a>
-    registers.registerY = memory.read((registers.PCB[1] << 8) & registers.PCB[2]);
+    registers.registerY = memory.read((registers.PCB[1] << 8) | registers.PCB[2]);
     break;
   case 0x10:
     //MVIA
@@ -202,23 +202,23 @@ void CPU::executeInstruction() { //I believe this is done
     break;
   case 0x15:
     //MVAM <a>
-    memory.write((registers.PCB[1] << 8) & registers.PCB[2], registers.registerA);
+    memory.write((registers.PCB[1] << 8) | registers.PCB[2], registers.registerA);
     break;
   case 0x16:
     //MVBM <a>
-    memory.write((registers.PCB[1] << 8) & registers.PCB[2], registers.registerB);
+    memory.write((registers.PCB[1] << 8) | registers.PCB[2], registers.registerB);
     break;
   case 0x17:
     //MVCM <a>
-    memory.write((registers.PCB[1] << 8) & registers.PCB[2], registers.registerC);
+    memory.write((registers.PCB[1] << 8) | registers.PCB[2], registers.registerC);
     break;
   case 0x18:
     //MVXM <a>
-    memory.write((registers.PCB[1] << 8) & registers.PCB[2], registers.registerX);
+    memory.write((registers.PCB[1] << 8) | registers.PCB[2], registers.registerX);
     break;
   case 0x19:
     //MVYM <a>
-    memory.write((registers.PCB[1] << 8) & registers.PCB[2], registers.registerY);
+    memory.write((registers.PCB[1] << 8) | registers.PCB[2], registers.registerY);
     break;
   case 0x1a:
     //MVAI
@@ -246,92 +246,94 @@ void CPU::executeInstruction() { //I believe this is done
     //////////////////////
   case 0x30:
     //PUSH A
-    registers.stackPointer--;
+    registers.decSP();
     memory.write(registers.stackPointer, registers.registerA);
     break;
   case 0x31:
     //PUSH B
-    registers.stackPointer--;
+    registers.decSP();
     memory.write(registers.stackPointer, registers.registerB);
     break;
   case 0x32:
     //PUSH C
-    registers.stackPointer--;
+    registers.decSP();
     memory.write(registers.stackPointer, registers.registerC);
     break;
   case 0x33:
     //PUSH X
-    registers.stackPointer--;
+    registers.decSP();
     memory.write(registers.stackPointer, registers.registerX);
     break;
   case 0x34:
     //PUSH Y
-    registers.stackPointer--;
+    registers.decSP();
     memory.write(registers.stackPointer, registers.registerY);
     break;
   case 0x35:
     //PUSH F
-    registers.stackPointer--;
+    registers.decSP();
     memory.write(registers.stackPointer, registers.flags.reg());
     break;
   case 0x36:
     //POP A
     registers.registerA = memory.read(registers.stackPointer);
-    registers.stackPointer++;
+    registers.incSP();
     break;
   case 0x37:
     //POP B
     registers.registerB = memory.read(registers.stackPointer);
-    registers.stackPointer++;
+    registers.incSP();
     break;
   case 0x38:
     //POP C
     registers.registerC = memory.read(registers.stackPointer);
-    registers.stackPointer++;
+    registers.incSP();
     break;
   case 0x39:
     //POP X
     registers.registerX = memory.read(registers.stackPointer);
-    registers.stackPointer++;
+    registers.incSP();
     break;
   case 0x3a:
     //POP Y
     registers.registerY = memory.read(registers.stackPointer);
-    registers.stackPointer++;
+    registers.incSP();
     break;
   case 0x3b:
     //POP F
     registers.flags.assignReg(memory.read(registers.stackPointer));
-    registers.stackPointer++;
+    registers.incSP();
     break;
   case 0x3c:
     //PUSH SP
-    registers.stackPointer--;
+    registers.decSP();
     memory.write(registers.stackPointer, (registers.stackPointer >> 8) & 0xff);
-    registers.stackPointer--;
+    registers.decSP();
     memory.write(registers.stackPointer, registers.stackPointer & 0xff);
     break;
   case 0x3d:
     //PUSH PC
-    registers.stackPointer--;
+    std::cout << std::hex << registers.stackPointer << std::dec << std::endl;
+    registers.decSP();
+    std::cout << std::hex << registers.stackPointer << std::dec << std::endl;
     memory.write(registers.stackPointer, (registers.programCounter >> 8) & 0xff);
-    registers.stackPointer--;
+    registers.decSP();
     memory.write(registers.stackPointer, registers.programCounter & 0xff);
     break;
   case 0x3e:
     //POP SP
     address = memory.read(registers.stackPointer) << 8;
-    registers.stackPointer++;
-    address = address & memory.read(registers.stackPointer);
-    registers.stackPointer++;
+    registers.incSP();
+    address = address | memory.read(registers.stackPointer);
+    registers.incSP();
     registers.stackPointer = address;
     break;
   case 0x3f:
     //POP PC
     registers.programCounter = memory.read(registers.stackPointer) << 8;
-    registers.stackPointer++;
-    registers.programCounter = registers.stackPointer & memory.read(registers.stackPointer);
-    registers.stackPointer++;
+    registers.incSP();
+    registers.programCounter = registers.programCounter | memory.read(registers.stackPointer);
+    registers.incSP();
     break;
 
 
@@ -340,30 +342,30 @@ void CPU::executeInstruction() { //I believe this is done
     ////////////////////////
   case 0x40:
     //JMP <a>
-    registers.programCounter = (registers.PCB[1] << 8) & registers.PCB[2];
+    registers.programCounter = (int(registers.PCB[1]) << 8) | registers.PCB[2];
     break;
   case 0x41:
     //JZ <a>
     if(registers.flags.zero) {
-      registers.programCounter = (registers.PCB[1] << 8) & registers.PCB[2];
+      registers.programCounter = (registers.PCB[1] << 8) | registers.PCB[2];
     }
     break;
   case 0x42:
     //JNZ <a>
     if(!registers.flags.zero) {
-      registers.programCounter = (registers.PCB[1] << 8) & registers.PCB[2];
+      registers.programCounter = (registers.PCB[1] << 8) | registers.PCB[2];
     }
     break;
   case 0x43:
     //JE <a>
     if(registers.flags.equal) {
-      registers.programCounter = (registers.PCB[1] << 8) & registers.PCB[2];
+      registers.programCounter = (registers.PCB[1] << 8) | registers.PCB[2];
     }
     break;
   case 0x44:
     //JNE <a>
     if(!registers.flags.equal) {
-      registers.programCounter = (registers.PCB[1] << 8) & registers.PCB[2];
+      registers.programCounter = (registers.PCB[1] << 8) | registers.PCB[2];
     }
     break;
   case 0x45:
@@ -375,14 +377,14 @@ void CPU::executeInstruction() { //I believe this is done
     registers.stackPointer--;
     memory.write(registers.stackPointer, registers.programCounter & 0xff);
     //jump to argument
-    registers.programCounter = (registers.PCB[1] << 8) & registers.PCB[2];
+    registers.programCounter = (registers.PCB[1] << 8) | registers.PCB[2];
     break;
   case 0x46:
     //RET
     //pop programCounter from stack
     registers.programCounter = memory.read(registers.stackPointer) << 8;
     registers.stackPointer++;
-    registers.programCounter = registers.stackPointer & memory.read(registers.stackPointer);
+    registers.programCounter = registers.stackPointer | memory.read(registers.stackPointer);
     registers.stackPointer++;
     break;
 
@@ -801,7 +803,7 @@ void CPU::executeInstruction() { //I believe this is done
     break;
   case 0x88:
     //SPS <a>
-    registers.stackPointer = (registers.PCB[1] << 8) & registers.PCB[2];
+    registers.stackPointer = (registers.PCB[1] << 8) | registers.PCB[2];
     break;
 
     //No instructions exist in this gap

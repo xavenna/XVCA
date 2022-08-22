@@ -18,6 +18,8 @@ public:
   unsigned PCBPos;  //where next fetched instruction goes
   void clearPCB();
   uint16_t XY();
+  void decSP();
+  void incSP();
   RegisterGroup();
 };
 
