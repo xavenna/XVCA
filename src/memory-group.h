@@ -37,11 +37,11 @@ class MemoryGroup {
   DriveCommandBuffer& drcBuf;
   ShutdownBuffer& shutdownBuf;
 public:
-  void write(uint16_t, char);
+  void write(uint16_t, const char);
   bool writeBlock(uint16_t, const char*, unsigned);
-  char read(uint16_t);
-  bool readBlock(uint16_t, char*, unsigned);
-  MemoryGroup(DriveBuffer*, DisplayBuffer*, KeyboardBuffer*, DriveCommandBuffer*, ShutdownBuffer*);
+  char read(uint16_t) const;
+  bool readBlock(uint16_t, char*, unsigned) const;
+  MemoryGroup(DriveBuffer&, DisplayBuffer&, KeyboardBuffer&, DriveCommandBuffer&, ShutdownBuffer&);
 };
 
 #endif

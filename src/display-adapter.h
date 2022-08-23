@@ -9,6 +9,7 @@ public:
   DisplayBuffer displayBuf;
   
   void updateDisplay();
+  void updateDisplayFull();
   DisplayAdapter();
 };
 

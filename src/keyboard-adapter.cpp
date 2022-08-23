@@ -10,9 +10,6 @@ bool KeyboardAdapter::updateBuffer() {
   std::string buf;
   do {
     read(STDIN_FILENO, &c, 1);
-#ifdef XV_DEBUG
-    //std::cout << +c << "\n";
-#endif
     if(c == 0x03) {
       //C-c: interrupt, shutdown
       return false;

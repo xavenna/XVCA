@@ -14,7 +14,7 @@ public:
   void fetchInsToPCB();
   bool pcbIsValidIns();
   void executeInstruction();
-  CPU(AdapterGroup);
+  CPU(AdapterGroup&);
 };
 
 

@@ -59,11 +59,13 @@ void DriveAdapter::loadSector(unsigned sect) {
   size_t fsize = fs::file_size(drive);
   //fsize is now size of the file
 
-  if(fsize < (sect-1)*1024) {
-    throw std::invalid_argument("DriveAdapter::loadSector(): Invalid sector");
+  if(fsize < (sect+1)*1024) {
+    std::string msg = "DriveAdapter::loadSector(): Invalid sector ";
+    msg += std::to_string(sect) + ".";
+    throw std::invalid_argument(msg);
   }
   //seek driveName
-  load.seekg((sect-1)*1024);
+  load.seekg((sect+1)*1024);
 
   //now load the sector into the thingy
   load.read(driveBuf.buffer, 1024);

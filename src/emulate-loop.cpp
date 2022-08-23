@@ -35,7 +35,19 @@ int beginEmulation(std::string targetDriveName) {
   emulator.cpu.memory.writeBlock(0, bootload.c_str(), bootload.size());
   emulator.cpu.registers.stackPointer = 0xf000;
   
+  char buffer[2000];
+  //for debugging:
+  for(int i=0;i<2000; i++) {
+    if(i%2==0) {
+      buffer[i] = 0x20;
+    }
+    else {
+      buffer[i] = 0x01;
+    }
+  }
 
+  //memcpy(emulator.adapterGroup.displayAdapter.displayBuf.buffer, buffer, 2000);
+  emulator.cpu.memory.writeBlock(0xf800, buffer, 2000);
   initializeTerm();
 
   while(true) {
@@ -49,7 +61,7 @@ int beginEmulation(std::string targetDriveName) {
 }
 
 void initializeTerm() {
-  std::cout << "\x1b[2J\x1b[=1h\x1b[H";  //prepare screen
+  std::cout << "\x1b[2J\x1b[=1h\x1b[H\x1b[?25l";  //prepare screen
 
   //enable raw mode
   tcgetattr(STDIN_FILENO, &orig_termios);

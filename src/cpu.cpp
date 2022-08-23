@@ -7,13 +7,14 @@
 
 void CPU::fetchInsToPCB() {  //doesn't worm
   char temp = memory.read(registers.programCounter);
-  std::cout << std::hex << registers.programCounter << ',' << +(uint8_t)temp << std::dec << '\n';
+  //std::cout << std::hex << registers.programCounter << ',' << +(uint8_t)temp << std::dec << '\n';
   registers.PCB[registers.PCBPos] = temp;
   registers.PCBPos++;
   registers.programCounter++;
 }
 
 void CPU::executeInstruction() { //I believe this is done
+  /*
 #ifdef XV_DEBUG
   std::cout << "Executing instruction " << std::hex << +registers.PCB[0]
 	    << std::dec << ".\n";
@@ -22,6 +23,7 @@ void CPU::executeInstruction() { //I believe this is done
   name << "Executing instruction " << +registers.PCB[0] << ".\n";
   name.close();
 #endif
+  */
   uint16_t address = 0;
   char temp8 = 0;
   switch(registers.PCB[0]) {
@@ -313,9 +315,7 @@ void CPU::executeInstruction() { //I believe this is done
     break;
   case 0x3d:
     //PUSH PC
-    std::cout << std::hex << registers.stackPointer << std::dec << std::endl;
     registers.decSP();
-    std::cout << std::hex << registers.stackPointer << std::dec << std::endl;
     memory.write(registers.stackPointer, (registers.programCounter >> 8) & 0xff);
     registers.decSP();
     memory.write(registers.stackPointer, registers.programCounter & 0xff);
@@ -932,6 +932,6 @@ bool CPU::pcbIsValidIns() {
   return false;
 }
 
-CPU::CPU(AdapterGroup ad) : memory{&ad.driveAdapter.driveBuf, &ad.displayAdapter.displayBuf, &ad.keyboardAdapter.keyboardBuffer, &ad.driveAdapter.drcBuf, &ad.shutdownBuf} {
+CPU::CPU(AdapterGroup& ad) : memory{ad.driveAdapter.driveBuf, ad.displayAdapter.displayBuf, ad.keyboardAdapter.keyboardBuffer, ad.driveAdapter.drcBuf, ad.shutdownBuf} {
 
 }

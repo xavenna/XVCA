@@ -41,13 +41,10 @@ bool Emulator::updateHardware() {
   }
   //update display
   //not now, for debugging reasons
-  //adapterGroup.displayAdapter.updateDisplay();
+  adapterGroup.displayAdapter.updateDisplay();
   //update keyboard
   bool interrupt = adapterGroup.keyboardAdapter.updateBuffer();
   return interrupt;  //false if shutdown
-}
-
-Emulator::Emulator() : cpu{adapterGroup} {
 }
 
 Emulator::Emulator(AdapterGroup& ag) : adapterGroup{ag}, cpu{ag}  {
