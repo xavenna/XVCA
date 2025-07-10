@@ -5,6 +5,8 @@
 #include <fstream>
 #include <cstring>
 #include <cstdint>
+#include <deque>
+#include <list>
 
 
 
@@ -22,7 +24,17 @@ int rewriteNum(std::string n) {
     //number is decimal
     return std::stoi (n);
   }
-  throw -1;  //this should never be reached. TBH, I have no idea why it is here
+}
+bool isAsmNum(const std::string& n) {
+  if(!n.empty()) {
+    if(n[0] == '$') {
+      return isNum(n.substr(1), 16);
+    }
+    if(n[0] == '%') {
+      return isNum(n.substr(1), 2);
+    }
+  }
+  return false;
 }
 
 void createHeader(std::vector<char>& machineCode, std::vector<char>& machineCodeWithHeader, uint16_t jp) {
@@ -31,17 +43,255 @@ void createHeader(std::vector<char>& machineCode, std::vector<char>& machineCode
   char jpL = jp & 0xff;
   char temp[16]{'X','V','C','A',0x10,0x00, jpH, jpL, '\0','\0','\0','\0','\0','\0','\0','\0'};
   machineCodeWithHeader.resize(16 + machineCode.size());
-  memcpy(&(*machineCodeWithHeader.begin()), temp, 16);
+  memcpy(&(*machineCodeWithHeader.begin()), temp, 16);  // this is extremely janky and probably unsafe
   memcpy(&(*(machineCodeWithHeader.begin()+16)), &(*machineCode.begin()), machineCode.size());
 
 }
 
-//fix this for xvca-p2
+/* XMLL Constructs:
+ *
+ *  for(register, startval, endval, increment)
+ *    ; commands
+ *  endfor
+ *
+ *  NOTE - A is not permitted as the register used
+ *  a for loop - transformed into the following:
+ *
+ *  ;;; (for)
+ *    MVV[reg] startval ;; if startval is a register, use MVR[reg] instead
+ *  xmllBeginFor[unique_id]:
+ *    MVVA [endval]
+ *    CMP [reg]
+ *    JZ xmllEndFor[unique_id]
+ *
+ *
+ *    ; commands
+ *
+ *  ;;; (endfor)
+ *    MVVA [increment]
+ *    ADD [reg]  ;;maybe this should be ADC?
+ *    MVR[reg] A
+ *    JMP xmllBeginFor[unique_id]
+ *  xmllEndFor[unique_id]:
+ *
+ *
+ *
+ *
+ */
+bool preprocess(const std::string& infile, const std::string& outfile) {
+  //go through the code, look for advanced constructs
+  //remove comments, handle includes?
+  //if, endif, syscall, string expanders
+  //how should this work? first parse it into a vector of lines,
+  std::ifstream get(infile);
+  std::list<std::string> lines;
+  std::string line;
+  while(get.peek() != EOF) {
+    std::getline(get, line);
+    if(line.size() <= 1) {
+      //line is empty, disregard
+      continue;
+    }
+    //first, prune preceding whitespace.
+    while(line.size() >= 1 && isEmpty(line[0])) { 
+      //excise indentation for now. it will be added back for lines with no label
+      if(line.size() == 1) {
+        line.clear();
+        break;
+      }
+      line = line.substr(1);
+    } 
+
+    //this is safe because || is a short-circuit operator
+    if(line.size() == 0 || line[0] == ';') {
+      //line is empty or a comment, disregard
+      continue;
+    }
+    else {
+      if(line.size() == 1 && isEmpty(line[0])) {
+        continue;
+      }
+      lines.push_back(line.substr(0, line.find(';')));
+    }
+  }
+  std::deque<forEntry> forListing; //record of each for in program
+                                   //do the actual preprocessing
+  unsigned i = 0; //loop counter
+  for(auto it = lines.begin();it != lines.end();std::advance(it, 1)) {
+    auto& x = *it;
+    //std::clog << x << '\n';
+    if(x.find("syscall(") != std::string::npos) {
+      std::cerr << "Error: Syscalls aren't legal yet.\n";
+      return false;
+    }
+    else if(x.find("if(") != std::string::npos) {
+
+    }
+    else if(x.find("endif") != std::string::npos) {
+
+    }
+    else if(x.find("for(") != std::string::npos) {
+      //get string inside parentheses
+      auto last(std::prev(it));
+      lines.erase(it);
+      it = std::next(last);
+      auto y = x.find(')');
+      auto spos = x.find('(');
+      if(y == std::string::npos) {
+        std::cerr << "Error: for statement is missing a close-parenthesis\n";
+        return false;
+      }
+      std::string inside = x.substr(spos+1,y-spos-1);
+      int increment = 1;
+      int startval = 0;
+      int endval = 0;
+      //parse inside
+      //should be for(reg,start,end)
+      std::vector<std::string> args;
+      parse(inside, args, ",");
+      if(args.size() != 3 && args.size() != 4) {
+        std::cerr << "Error: for statement has the wrong number of arguments\n";
+        return false;
+      }
+      if(args[0].size() != 1 || !isReg(args[0][0])) {
+        std::cerr << "Error: invalid register name in for statement\n";
+        return false;
+      }
+      if(!isAsmNum(args[1]) || !isAsmNum(args[2])) {
+        std::cerr << "Error: argument to for loop is not an integer\n";
+        return false;
+      }
+      startval = rewriteNum(args[1]);
+      endval = rewriteNum(args[2]);
+      if(args.size() == 4) {
+        if(!isNum(args[3])) {
+          std::cerr << "Error: increment argument in for statement is not an integer\n";
+          return false;
+        }
+        increment = std::stoi(args[3]);
+      }
+      forEntry t;
+      t.reg = args[0][0];
+      t.line = i;
+      t.increment = increment;
+      forListing.push_back(t);
+      //generate intro code
+      /*    MVV[reg] startval ;; if startval is a register, use MVR[reg] instead
+       *  xmllBeginFor[unique_id]:
+       *    MVVA [endval]
+       *    CMPR [reg]
+       *    JZ xmllEndFor[unique_id]
+       */
+      line = std::string("MVV") + t.reg + " " + std::to_string(startval);
+      lines.insert(it, line);
+
+      line = std::string("xmllBeginFor")+std::to_string(t.line) + ":";
+      lines.insert(it, line);
+
+      line = std::string("MVVA ") + std::to_string(endval);
+      lines.insert(it, line);
+
+      line = std::string("CMPR ") + t.reg;
+      lines.insert(it, line);
+
+      line = std::string("JZ xmllEndFor")+std::to_string(t.line);
+      lines.insert(it, line);
+    }
+    else if(x.find("endfor") != std::string::npos) {
+      if(forListing.size() == 0) {
+        std::cerr << "Error: endfor without preceding for located\n";
+        return false;
+      }
+      auto last(std::prev(it));
+      lines.erase(it);
+      it = std::next(last);
+      forEntry t = forListing.back();
+      forListing.pop_back();
+      /*
+       *    MVVA [increment]
+       *    ADR [reg]  ;;maybe this should be ADC?
+       *    MVR[reg] A
+       *    JMP xmllBeginFor[unique_id]
+       *  xmllEndFor[unique_id]:
+       */
+      line = std::string("MVVA ") + std::to_string(t.increment);
+      lines.insert(it, line);
+
+      line = std::string("ADR ") + t.reg;
+      lines.insert(it, line);
+
+      line = std::string("MVR") + t.reg + " A";
+      lines.insert(it, line);
+
+      line = std::string("JMP xmllBeginFor")+std::to_string(t.line);
+      lines.insert(it, line);
+
+      line = std::string("xmllEndFor")+std::to_string(t.line) + ":";
+      lines.insert(it, line);
+    }
+    else if(x.find("str(") != std::string::npos) {
+      //add a string constant
+    }
+    i++;
+  }
+  //write the file to outfile
+  std::ofstream put(outfile);
+  for(auto x : lines) {
+    if(x.find(':') == std::string::npos) {
+      put << '\t';
+    }
+    put << x << '\n';
+  }
+  return true;
+}
+
+//I really need to organize this.
+//First, split line at spaces to get an arg list. Make helper functions as needed
 int transformLineToMachineCode(std::vector<char>& machineCode, std::string line, std::map<int, std::string>& jumpHash, int lineNum) {
+  //check if line is an instruction or a directive (like .db)
   //maybe move this function to a new file, as it is over 1000 lines of code
   size_t beginSize = machineCode.size();  //used for creating label offsets 
-  line = line.substr(0,line.find(";")); //trim comments
   std::string instName = line.substr(0, line.find(" "));
+
+  if(line[0] == '.') {
+    //resolve directive
+    if(instName == ".db") {
+      //insert a single raw byte into the machine code
+      if(line.size() < 6) { 
+        std::cout << "Error: missing argument at line " << lineNum << ".\n";
+      }
+      else {
+        try {
+          int arg = rewriteNum(line.substr(4, line.find(" ", 5)));
+          if(arg > 255 || arg < 0) {
+            std::cout << "Error: argument is not an unsigned 8 bit integer\n";
+          }
+          else {
+            machineCode.push_back(arg);
+          }
+        }
+        catch (int e) {
+          if(e == -1) {
+            std::cout << "Error: invalid numeric prefix";
+            //error: ...
+          }
+        }
+        catch (...) {
+          std::cout << "Error: argument could not be parsed as a number\n";
+        }
+      }
+    }
+    else if(instName == ".dbchar") {
+      //insert a single ascii char into the machine code
+      if(line.size() != 9) {
+        std::cout << "Error: argument error at line "<<lineNum << ".\n";
+      }
+      else {
+        machineCode.push_back(line[8]);
+      }
+    }
+    return (machineCode.size() - beginSize);  //number of bytes added
+  }
   //the following section is kind of an unreasonable mess. Something could probably be done about this
   //maybe parse arguments at the beginning, then each function can deal with them
 
@@ -54,10 +304,10 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     else {
       machineCode.push_back(0x01);
       if(isReg(line[5])) {
-	machineCode.push_back(regToNum(line[5]));
+        machineCode.push_back(regToNum(line[5]));
       }
       else {
-	std::cout << "Error: invalid argument at line " << lineNum << ".\n";
+        std::cout << "Error: invalid argument at line " << lineNum << ".\n";
       }
     }
   }
@@ -69,10 +319,10 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     else {
       machineCode.push_back(0x02);
       if(isReg(line[5])) {
-	machineCode.push_back(regToNum(line[5]));
+        machineCode.push_back(regToNum(line[5]));
       }
       else {
-	std::cout << "Error: invalid argument at line " << lineNum << ".\n";
+        std::cout << "Error: invalid argument at line " << lineNum << ".\n";
       }
     }
   }
@@ -84,10 +334,10 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     else {
       machineCode.push_back(0x03);
       if(isReg(line[5])) {
-	machineCode.push_back(regToNum(line[5]));
+        machineCode.push_back(regToNum(line[5]));
       }
       else {
-	std::cout << "Error: invalid argument at line " << lineNum << ".\n";
+        std::cout << "Error: invalid argument at line " << lineNum << ".\n";
       }
     }
   }
@@ -99,10 +349,10 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     else {
       machineCode.push_back(0x04);
       if(isReg(line[5])) {
-	machineCode.push_back(regToNum(line[5]));
+        machineCode.push_back(regToNum(line[5]));
       }
       else {
-	std::cout << "Error: invalid argument at line " << lineNum << ".\n";
+        std::cout << "Error: invalid argument at line " << lineNum << ".\n";
       }
     }
   }
@@ -114,10 +364,10 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     else {
       machineCode.push_back(0x05);
       if(isReg(line[5])) {
-	machineCode.push_back(regToNum(line[5]));
+        machineCode.push_back(regToNum(line[5]));
       }
       else {
-	std::cout << "Error: invalid argument at line " << lineNum << ".\n";
+        std::cout << "Error: invalid argument at line " << lineNum << ".\n";
       }
     }
   }
@@ -129,22 +379,22 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     }
     else {  //check if argument is a valid 8-bit value
       try {
-	int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
-	if(arg > 255 || arg < 0) {
-	  std::cout << "Error: argument is not an unsigned 8 bit integer\n";
-	}
-	else {
-	  machineCode.push_back(arg);
-	}
+        int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
+        if(arg > 255 || arg < 0) {
+          std::cout << "Error: argument is not an unsigned 8 bit integer\n";
+        }
+        else {
+          machineCode.push_back(arg);
+        }
       }
       catch (int e) {
-	if(e == -1) {
-	  std::cout << "Error: invalid numeric prefix";
-	  //error: ...
-	}
+        if(e == -1) {
+          std::cout << "Error: invalid numeric prefix";
+          //error: ...
+        }
       }
       catch (...) {
-	std::cout << "Error: argument could not be parsed as a number\n";
+        std::cout << "Error: argument could not be parsed as a number\n";
       }
     }
   }
@@ -156,23 +406,23 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     else {
       //check if argument is a valid 8-bit value
       try {
-	int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
-	//std::cout << arg << '\n';
-	if(arg > 255 || arg < 0) {
-	  std::cout << "Error: argument is not an unsigned 8 bit integer\n";
-	  //error: argument is not an unsigned 8-bit integer
-	}
-	else {
-	  machineCode.push_back(arg);
-	}
+        int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
+        //std::cout << arg << '\n';
+        if(arg > 255 || arg < 0) {
+          std::cout << "Error: argument is not an unsigned 8 bit integer\n";
+          //error: argument is not an unsigned 8-bit integer
+        }
+        else {
+          machineCode.push_back(arg);
+        }
       }
       catch (int e) {
-	if(e == -1) {
-	  //error: ...
-	}
+        if(e == -1) {
+          //error: ...
+        }
       }
       catch (...) {
-	std::cout << "Error: argument could not be parsed as a number\n";
+        std::cout << "Error: argument could not be parsed as a number\n";
       }
     }
   }
@@ -184,23 +434,23 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     else {
       //check if argument is a valid 8-bit value
       try {
-	int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
-	//std::cout << arg << '\n';
-	if(arg > 255 || arg < 0) {
-	  std::cout << "Error: argument is not an unsigned 8 bit integer\n";
-	  //error: argument is not an unsigned 8-bit integer
-	}
-	else {
-	  machineCode.push_back(arg);
-	}
+        int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
+        //std::cout << arg << '\n';
+        if(arg > 255 || arg < 0) {
+          std::cout << "Error: argument is not an unsigned 8 bit integer\n";
+          //error: argument is not an unsigned 8-bit integer
+        }
+        else {
+          machineCode.push_back(arg);
+        }
       }
       catch (int e) {
-	if(e == -1) {
-	  //error: ...
-	}
+        if(e == -1) {
+          //error: ...
+        }
       }
       catch (...) {
-	std::cout << "Error: argument could not be parsed as a number\n";
+        std::cout << "Error: argument could not be parsed as a number\n";
       }
     }
   }
@@ -212,23 +462,23 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     else {
       //check if argument is a valid 8-bit value
       try {
-	int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
-	//std::cout << arg << '\n';
-	if(arg > 255 || arg < 0) {
-	  std::cout << "Error: argument is not an unsigned 8 bit integer\n";
-	  //error: argument is not an unsigned 8-bit integer
-	}
-	else {
-	  machineCode.push_back(arg);
-	}
+        int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
+        //std::cout << arg << '\n';
+        if(arg > 255 || arg < 0) {
+          std::cout << "Error: argument is not an unsigned 8 bit integer\n";
+          //error: argument is not an unsigned 8-bit integer
+        }
+        else {
+          machineCode.push_back(arg);
+        }
       }
       catch (int e) {
-	if(e == -1) {
-	  //error: ...
-	}
+        if(e == -1) {
+          //error: ...
+        }
       }
       catch (...) {
-	std::cout << "Error: argument could not be parsed as a number\n";
+        std::cout << "Error: argument could not be parsed as a number\n";
       }
     }
   }
@@ -240,22 +490,22 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     else {
       //check if argument is a valid 8-bit value
       try {
-	int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
-	//std::cout << arg << '\n';
-	if(arg > 255 || arg < 0) {
-	  std::cout << "Error: argument is not an unsigned 8 bit integer\n";
-	}
-	else {
-	  machineCode.push_back(arg);
-	}
+        int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
+        //std::cout << arg << '\n';
+        if(arg > 255 || arg < 0) {
+          std::cout << "Error: argument is not an unsigned 8 bit integer\n";
+        }
+        else {
+          machineCode.push_back(arg);
+        }
       }
       catch (int e) {
-	if(e == -1) {
-	  //error: ...
-	}
+        if(e == -1) {
+          //error: ...
+        }
       }
       catch (...) {
-	std::cout << "Error: argument could not be parsed as a number\n";
+        std::cout << "Error: argument could not be parsed as a number\n";
       }
     }
   }
@@ -267,22 +517,22 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     else {
       //check if argument is a valid 8-bit value
       try {
-	int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
-	if(arg > 0xffff || arg < 0) {
-	  std::cout << "Error: argument is not an unsigned 16 bit integer\n";
-	}
-	else {
-	  machineCode.push_back((arg & 0xff00) >> 8);
-	  machineCode.push_back(arg & 0x00ff);
-	}
+        int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
+        if(arg > 0xffff || arg < 0) {
+          std::cout << "Error: argument is not an unsigned 16 bit integer\n";
+        }
+        else {
+          machineCode.push_back((arg & 0xff00) >> 8);
+          machineCode.push_back(arg & 0x00ff);
+        }
       }
       catch (int e) {
-	if(e == -1) {
-	  //error: ...
-	}
+        if(e == -1) {
+          //error: ...
+        }
       }
       catch (...) {
-	std::cout << "Error: argument could not be parsed as a number\n";
+        std::cout << "Error: argument could not be parsed as a number\n";
       }
     }
   }
@@ -294,22 +544,22 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     else {
       //check if argument is a valid 8-bit value
       try {
-	int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
-	if(arg > 0xffff || arg < 0) {
-	  std::cout << "Error: argument is not an unsigned 16 bit integer\n";
-	}
-	else {
-	  machineCode.push_back((arg & 0xff00) >> 8);
-	  machineCode.push_back(arg & 0x00ff);
-	}
+        int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
+        if(arg > 0xffff || arg < 0) {
+          std::cout << "Error: argument is not an unsigned 16 bit integer\n";
+        }
+        else {
+          machineCode.push_back((arg & 0xff00) >> 8);
+          machineCode.push_back(arg & 0x00ff);
+        }
       }
       catch (int e) {
-	if(e == -1) {
-	  //error: ...
-	}
+        if(e == -1) {
+          //error: ...
+        }
       }
       catch (...) {
-	std::cout << "Error: argument could not be parsed as a number\n";
+        std::cout << "Error: argument could not be parsed as a number\n";
       }
     }
   }
@@ -321,22 +571,22 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     else {
       //check if argument is a valid 8-bit value
       try {
-	int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
-	if(arg > 0xffff || arg < 0) {
-	  std::cout << "Error: argument is not an unsigned 16 bit integer\n";
-	}
-	else {
-	  machineCode.push_back((arg & 0xff00) >> 8);
-	  machineCode.push_back(arg & 0x00ff);
-	}
+        int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
+        if(arg > 0xffff || arg < 0) {
+          std::cout << "Error: argument is not an unsigned 16 bit integer\n";
+        }
+        else {
+          machineCode.push_back((arg & 0xff00) >> 8);
+          machineCode.push_back(arg & 0x00ff);
+        }
       }
       catch (int e) {
-	if(e == -1) {
-	  //error: ...
-	}
+        if(e == -1) {
+          //error: ...
+        }
       }
       catch (...) {
-	std::cout << "Error: argument could not be parsed as a number\n";
+        std::cout << "Error: argument could not be parsed as a number\n";
       }
     }
   }
@@ -348,22 +598,22 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     }
     else {
       try {  //check if argument is a valid 8-bit value
-	int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
-	if(arg > 0xffff || arg < 0) {
-	  std::cout << "Error: argument is not an unsigned 16 bit integer\n";
-	}
-	else {
-	  machineCode.push_back((arg & 0xff00) >> 8);
-	  machineCode.push_back(arg & 0x00ff);
-	}
+        int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
+        if(arg > 0xffff || arg < 0) {
+          std::cout << "Error: argument is not an unsigned 16 bit integer\n";
+        }
+        else {
+          machineCode.push_back((arg & 0xff00) >> 8);
+          machineCode.push_back(arg & 0x00ff);
+        }
       }
       catch (int e) {
-	if(e == -1) {
-	  std::cout << "Error: invalid numeric prefix.\n";
-	}
+        if(e == -1) {
+          std::cout << "Error: invalid numeric prefix.\n";
+        }
       }
       catch (...) {
-	std::cout << "Error: argument could not be parsed as a number\n";
+        std::cout << "Error: argument could not be parsed as a number\n";
       }
     }
   }
@@ -375,22 +625,22 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     else {
       //check if argument is a valid 8-bit value
       try {
-	int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
-	if(arg > 0xffff || arg < 0) {
-	  std::cout << "Error: argument is not an unsigned 16 bit integer\n";
-	}
-	else {
-	  machineCode.push_back((arg & 0xff00) >> 8);
-	  machineCode.push_back(arg & 0x00ff);
-	}
+        int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
+        if(arg > 0xffff || arg < 0) {
+          std::cout << "Error: argument is not an unsigned 16 bit integer\n";
+        }
+        else {
+          machineCode.push_back((arg & 0xff00) >> 8);
+          machineCode.push_back(arg & 0x00ff);
+        }
       }
       catch (int e) {
-	if(e == -1) {
-	  //error: ...
-	}
+        if(e == -1) {
+          //error: ...
+        }
       }
       catch (...) {
-	std::cout << "Error: argument could not be parsed as a number\n";
+        std::cout << "Error: argument could not be parsed as a number\n";
       }
     }
   }
@@ -417,22 +667,22 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     }
     else {
       try {  //check if argument is a valid 8-bit value
-	int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
-	if(arg > 0xffff || arg < 0) {
-	  std::cout << "Error: argument is not an unsigned 16 bit integer\n";
-	}
-	else {
-	  machineCode.push_back((arg & 0xff00) >> 8);
-	  machineCode.push_back(arg & 0x00ff);
-	}
+        int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
+        if(arg > 0xffff || arg < 0) {
+          std::cout << "Error: argument is not an unsigned 16 bit integer\n";
+        }
+        else {
+          machineCode.push_back((arg & 0xff00) >> 8);
+          machineCode.push_back(arg & 0x00ff);
+        }
       }
       catch (int e) {
-	if(e == -1) {
-	  std::cout << "Error: invalid numeric prefix.\n";
-	}
+        if(e == -1) {
+          std::cout << "Error: invalid numeric prefix.\n";
+        }
       }
       catch (...) {
-	std::cout << "Error: argument could not be parsed as a number\n";
+        std::cout << "Error: argument could not be parsed as a number\n";
       }
     }
   }
@@ -444,22 +694,22 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     }
     else {
       try {  //check if argument is a valid 8-bit value
-	int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
-	if(arg > 0xffff || arg < 0) {
-	  std::cout << "Error: argument is not an unsigned 16 bit integer\n";
-	}
-	else {
-	  machineCode.push_back((arg & 0xff00) >> 8);
-	  machineCode.push_back(arg & 0x00ff);
-	}
+        int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
+        if(arg > 0xffff || arg < 0) {
+          std::cout << "Error: argument is not an unsigned 16 bit integer\n";
+        }
+        else {
+          machineCode.push_back((arg & 0xff00) >> 8);
+          machineCode.push_back(arg & 0x00ff);
+        }
       }
       catch (int e) {
-	if(e == -1) {
-	  std::cout << "Error: invalid numeric prefix.\n";
-	}
+        if(e == -1) {
+          std::cout << "Error: invalid numeric prefix.\n";
+        }
       }
       catch (...) {
-	std::cout << "Error: argument could not be parsed as a number\n";
+        std::cout << "Error: argument could not be parsed as a number\n";
       }
     }
   }
@@ -471,22 +721,22 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     }
     else {
       try {  //check if argument is a valid 8-bit value
-	int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
-	if(arg > 0xffff || arg < 0) {
-	  std::cout << "Error: argument is not an unsigned 16 bit integer\n";
-	}
-	else {
-	  machineCode.push_back((arg & 0xff00) >> 8);
-	  machineCode.push_back(arg & 0x00ff);
-	}
+        int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
+        if(arg > 0xffff || arg < 0) {
+          std::cout << "Error: argument is not an unsigned 16 bit integer\n";
+        }
+        else {
+          machineCode.push_back((arg & 0xff00) >> 8);
+          machineCode.push_back(arg & 0x00ff);
+        }
       }
       catch (int e) {
-	if(e == -1) {
-	  std::cout << "Error: invalid numeric prefix.\n";
-	}
+        if(e == -1) {
+          std::cout << "Error: invalid numeric prefix.\n";
+        }
       }
       catch (...) {
-	std::cout << "Error: argument could not be parsed as a number\n";
+        std::cout << "Error: argument could not be parsed as a number\n";
       }
     }
   }
@@ -498,22 +748,22 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     }
     else {
       try {  //check if argument is a valid 8-bit value
-	int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
-	if(arg > 0xffff || arg < 0) {
-	  std::cout << "Error: argument is not an unsigned 16 bit integer\n";
-	}
-	else {
-	  machineCode.push_back((arg & 0xff00) >> 8);
-	  machineCode.push_back(arg & 0x00ff);
-	}
+        int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
+        if(arg > 0xffff || arg < 0) {
+          std::cout << "Error: argument is not an unsigned 16 bit integer\n";
+        }
+        else {
+          machineCode.push_back((arg & 0xff00) >> 8);
+          machineCode.push_back(arg & 0x00ff);
+        }
       }
       catch (int e) {
-	if(e == -1) {
-	  std::cout << "Error: invalid numeric prefix.\n";
-	}
+        if(e == -1) {
+          std::cout << "Error: invalid numeric prefix.\n";
+        }
       }
       catch (...) {
-	std::cout << "Error: argument could not be parsed as a number\n";
+        std::cout << "Error: argument could not be parsed as a number\n";
       }
     }
   }
@@ -525,22 +775,22 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     }
     else {
       try {  //check if argument is a valid 8-bit value
-	int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
-	if(arg > 0xffff || arg < 0) {
-	  std::cout << "Error: argument is not an unsigned 16 bit integer\n";
-	}
-	else {
-	  machineCode.push_back((arg & 0xff00) >> 8);
-	  machineCode.push_back(arg & 0x00ff);
-	}
+        int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
+        if(arg > 0xffff || arg < 0) {
+          std::cout << "Error: argument is not an unsigned 16 bit integer\n";
+        }
+        else {
+          machineCode.push_back((arg & 0xff00) >> 8);
+          machineCode.push_back(arg & 0x00ff);
+        }
       }
       catch (int e) {
-	if(e == -1) {
-	  std::cout << "Error: invalid numeric prefix.\n";
-	}
+        if(e == -1) {
+          std::cout << "Error: invalid numeric prefix.\n";
+        }
       }
       catch (...) {
-	std::cout << "Error: argument could not be parsed as a number\n";
+        std::cout << "Error: argument could not be parsed as a number\n";
       }
     }
   }
@@ -571,31 +821,31 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     }
     else {
       if(line[5] == 'A') {
-	machineCode.push_back(0x30);
+        machineCode.push_back(0x30);
       }
       else if(line[5] == 'B') {
-	machineCode.push_back(0x31);
+        machineCode.push_back(0x31);
       }
       else if(line[5] == 'C') {
-	machineCode.push_back(0x32);
+        machineCode.push_back(0x32);
       }
       else if(line[5] == 'X') {
-	machineCode.push_back(0x33);
+        machineCode.push_back(0x33);
       }
       else if(line[5] == 'Y') {
-	machineCode.push_back(0x34);
+        machineCode.push_back(0x34);
       }
       else if(line[5] == 'F') {
-	machineCode.push_back(0x35);
+        machineCode.push_back(0x35);
       }
       else if(line.size() > 6 && line[5] == 'S' && line[6] == 'P') {
-	machineCode.push_back(0x3c);
+        machineCode.push_back(0x3c);
       }
       else if(line.size() > 6 && line[5] == 'P' && line[6] == 'C') {
-	machineCode.push_back(0x3d);
+        machineCode.push_back(0x3d);
       }
       else {
-	std::cout << "Error: invalid argument for instruction '" << instName << "'\n";
+        std::cout << "Error: invalid argument for instruction '" << instName << "'\n";
       }
     }
   }
@@ -605,31 +855,31 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     }
     else {
       if(line[4] == 'A') {
-	machineCode.push_back(0x36);
+        machineCode.push_back(0x36);
       }
       else if(line[4] == 'B') {
-	machineCode.push_back(0x37);
+        machineCode.push_back(0x37);
       }
       else if(line[4] == 'C') {
-	machineCode.push_back(0x38);
+        machineCode.push_back(0x38);
       }
       else if(line[4] == 'X') {
-	machineCode.push_back(0x39);
+        machineCode.push_back(0x39);
       }
       else if(line[4] == 'Y') {
-	machineCode.push_back(0x3a);
+        machineCode.push_back(0x3a);
       }
       else if(line[4] == 'F') {
-	machineCode.push_back(0x3b);
+        machineCode.push_back(0x3b);
       }
       else if(line.size() > 6 && line[5] == 'S' && line[6] == 'P') {
-	machineCode.push_back(0x3e);
+        machineCode.push_back(0x3e);
       }
       else if(line.size() > 6 && line[5] == 'P' && line[6] == 'C') {
-	machineCode.push_back(0x3f);
+        machineCode.push_back(0x3f);
       }
       else {
-	std::cout << "Error: invalid argument for instruction '" << instName << "'\n";
+        std::cout << "Error: invalid argument for instruction '" << instName << "'\n";
       }
     }
   }
@@ -641,26 +891,26 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     }
     else {
       try {  //check if argument is a valid 8-bit value
-	int arg = rewriteNum(line.substr(4, line.find(" ", 5)));
-	if(arg > 0xffff || arg < 0) {
-	  std::cout << "Error: argument is not an unsigned 16 bit integer\n";
-	}
-	else {
-	  machineCode.push_back((arg & 0xff00) >> 8);
-	  machineCode.push_back(arg & 0x00ff);
-	}
+        int arg = rewriteNum(line.substr(4, line.find(" ", 5)));
+        if(arg > 0xffff || arg < 0) {
+          std::cout << "Error: argument is not an unsigned 16 bit integer\n";
+        }
+        else {
+          machineCode.push_back((arg & 0xff00) >> 8);
+          machineCode.push_back(arg & 0x00ff);
+        }
       }
       catch (int e) {
-	if(e == -1) {
-	  std::cout << "Error: invalid numeric prefix.\n";
-	}
+        if(e == -1) {
+          std::cout << "Error: invalid numeric prefix.\n";
+        }
       }
       catch (...) {
-	//target is label
-	int targetLocation = machineCode.size();
-	jumpHash.emplace(targetLocation, line.substr(4, line.find(" ", 5)));
-	machineCode.push_back(0x00);
-	machineCode.push_back(0x00);
+        //target is label
+        int targetLocation = machineCode.size();
+        jumpHash.emplace(targetLocation, line.substr(4, line.find(" ", 5)));
+        machineCode.push_back(0x00);
+        machineCode.push_back(0x00);
       }
     }
   }
@@ -672,25 +922,25 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     }
     else {
       try {  //check if argument is a valid 8-bit value
-	int arg = rewriteNum(line.substr(3, line.find(" ", 4)));
-	if(arg > 0xffff || arg < 0) {
-	  std::cout << "Error: argument is not an unsigned 16 bit integer\n";
-	}
-	else {
-	  machineCode.push_back((arg & 0xff00) >> 8);
-	  machineCode.push_back(arg & 0x00ff);
-	}
+        int arg = rewriteNum(line.substr(3, line.find(" ", 4)));
+        if(arg > 0xffff || arg < 0) {
+          std::cout << "Error: argument is not an unsigned 16 bit integer\n";
+        }
+        else {
+          machineCode.push_back((arg & 0xff00) >> 8);
+          machineCode.push_back(arg & 0x00ff);
+        }
       }
       catch (int e) {
-	if(e == -1) {
-	  std::cout << "Error: invalid numeric prefix.\n";
-	}
+        if(e == -1) {
+          std::cout << "Error: invalid numeric prefix.\n";
+        }
       }
       catch (...) {
-	int targetLocation = machineCode.size();
-	jumpHash.emplace(targetLocation, line.substr(3, line.find(" ", 4)));
-	machineCode.push_back(0x00);
-	machineCode.push_back(0x00);
+        int targetLocation = machineCode.size();
+        jumpHash.emplace(targetLocation, line.substr(3, line.find(" ", 4)));
+        machineCode.push_back(0x00);
+        machineCode.push_back(0x00);
       }
     }
   }
@@ -702,29 +952,29 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     }
     else {
       try {  //check if argument is a valid 8-bit value
-	int arg = rewriteNum(line.substr(4, line.find(" ", 5)));
-	if(arg > 0xffff || arg < 0) {
-	  std::cout << "Error: argument is not an unsigned 16 bit integer\n";
-	}
-	else {
-	  machineCode.push_back((arg & 0xff00) >> 8);
-	  machineCode.push_back(arg & 0x00ff);
-	}
+        int arg = rewriteNum(line.substr(4, line.find(" ", 5)));
+        if(arg > 0xffff || arg < 0) {
+          std::cout << "Error: argument is not an unsigned 16 bit integer\n";
+        }
+        else {
+          machineCode.push_back((arg & 0xff00) >> 8);
+          machineCode.push_back(arg & 0x00ff);
+        }
       }
       catch (int e) {
-	if(e == -1) {
-	  std::cout << "Error: invalid numeric prefix.\n";
-	}
+        if(e == -1) {
+          std::cout << "Error: invalid numeric prefix.\n";
+        }
       }
       catch (...) {
-	int targetLocation = machineCode.size();
-	jumpHash.emplace(targetLocation, line.substr(4, line.find(" ", 5)));
-	machineCode.push_back(0x00);
-	machineCode.push_back(0x00);
+        int targetLocation = machineCode.size();
+        jumpHash.emplace(targetLocation, line.substr(4, line.find(" ", 5)));
+        machineCode.push_back(0x00);
+        machineCode.push_back(0x00);
       }
     }
   }
-  else if(instName == "JE") {
+  else if(instName == "JG") {
     machineCode.push_back(0x43);
     if(line.size() < 4) {
       std::cout << "Error: missing argument for instruction '" << instName << "'\n";
@@ -732,29 +982,29 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     }
     else {
       try {  //check if argument is a valid 8-bit value
-	int arg = rewriteNum(line.substr(3, line.find(" ", 4)));
-	if(arg > 0xffff || arg < 0) {
-	  std::cout << "Error: argument is not an unsigned 16 bit integer\n";
-	}
-	else {
-	  machineCode.push_back((arg & 0xff00) >> 8);
-	  machineCode.push_back(arg & 0x00ff);
-	}
+        int arg = rewriteNum(line.substr(3, line.find(" ", 4)));
+        if(arg > 0xffff || arg < 0) {
+          std::cout << "Error: argument is not an unsigned 16 bit integer\n";
+        }
+        else {
+          machineCode.push_back((arg & 0xff00) >> 8);
+          machineCode.push_back(arg & 0x00ff);
+        }
       }
       catch (int e) {
-	if(e == -1) {
-	  std::cout << "Error: invalid numeric prefix.\n";
-	}
+        if(e == -1) {
+          std::cout << "Error: invalid numeric prefix.\n";
+        }
       }
       catch (...) {
-	int targetLocation = machineCode.size();
-	jumpHash.emplace(targetLocation, line.substr(3, line.find(" ", 4)));
-	machineCode.push_back(0x00);
-	machineCode.push_back(0x00);
+        int targetLocation = machineCode.size();
+        jumpHash.emplace(targetLocation, line.substr(3, line.find(" ", 4)));
+        machineCode.push_back(0x00);
+        machineCode.push_back(0x00);
       }
     }
   }
-  else if(instName == "JNE") {
+  else if(instName == "JNG") {
     machineCode.push_back(0x44);
     if(line.size() < 5) {
       std::cout << "Error: missing argument for instruction '" << instName << "'\n";
@@ -762,25 +1012,25 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     }
     else {
       try {  //check if argument is a valid 8-bit value
-	int arg = rewriteNum(line.substr(4, line.find(" ", 5)));
-	if(arg > 0xffff || arg < 0) {
-	  std::cout << "Error: argument is not an unsigned 16 bit integer\n";
-	}
-	else {
-	  machineCode.push_back((arg & 0xff00) >> 8);
-	  machineCode.push_back(arg & 0x00ff);
-	}
+        int arg = rewriteNum(line.substr(4, line.find(" ", 5)));
+        if(arg > 0xffff || arg < 0) {
+          std::cout << "Error: argument is not an unsigned 16 bit integer\n";
+        }
+        else {
+          machineCode.push_back((arg & 0xff00) >> 8);
+          machineCode.push_back(arg & 0x00ff);
+        }
       }
       catch (int e) {
-	if(e == -1) {
-	  std::cout << "Error: invalid numeric prefix.\n";
-	}
+        if(e == -1) {
+          std::cout << "Error: invalid numeric prefix.\n";
+        }
       }
       catch (...) {
-	int targetLocation = machineCode.size();
-	jumpHash.emplace(targetLocation, line.substr(4, line.find(" ", 5)));
-	machineCode.push_back(0x00);
-	machineCode.push_back(0x00);
+        int targetLocation = machineCode.size();
+        jumpHash.emplace(targetLocation, line.substr(4, line.find(" ", 5)));
+        machineCode.push_back(0x00);
+        machineCode.push_back(0x00);
       }
     }
   }
@@ -792,25 +1042,25 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     }
     else {
       try {  //check if argument is a valid 8-bit value
-	int arg = rewriteNum(line.substr(4, line.find(" ", 5)));
-	if(arg > 0xffff || arg < 0) {
-	  std::cout << "Error: argument is not an unsigned 16 bit integer\n";
-	}
-	else {
-	  machineCode.push_back((arg & 0xff00) >> 8);
-	  machineCode.push_back(arg & 0x00ff);
-	}
+        int arg = rewriteNum(line.substr(4, line.find(" ", 5)));
+        if(arg > 0xffff || arg < 0) {
+          std::cout << "Error: argument is not an unsigned 16 bit integer\n";
+        }
+        else {
+          machineCode.push_back((arg & 0xff00) >> 8);
+          machineCode.push_back(arg & 0x00ff);
+        }
       }
       catch (int e) {
-	if(e == -1) {
-	  std::cout << "Error: invalid numeric prefix.\n";
-	}
+        if(e == -1) {
+          std::cout << "Error: invalid numeric prefix.\n";
+        }
       }
       catch (...) {
-	int targetLocation = machineCode.size();
-	jumpHash.emplace(targetLocation, line.substr(4, line.find(" ", 5)));
-	machineCode.push_back(0x00);
-	machineCode.push_back(0x00);
+        int targetLocation = machineCode.size();
+        jumpHash.emplace(targetLocation, line.substr(5, line.find(" ", 5)));
+        machineCode.push_back(0x00);
+        machineCode.push_back(0x00);
       }
     }
   }
@@ -824,10 +1074,10 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     else {
       machineCode.push_back(0x50);
       if(isReg(line[4])) {
-	machineCode.push_back(regToNum(line[4]));
+        machineCode.push_back(regToNum(line[4]));
       }
       else {
-	std::cout << "Error: invalid argument for instruction '" << instName << "'\n";
+        std::cout << "Error: invalid argument for instruction '" << instName << "'\n";
       }
     }
   }
@@ -838,10 +1088,10 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     else {
       machineCode.push_back(0x51);
       if(isReg(line[5])) {
-	machineCode.push_back(regToNum(line[5]));
+        machineCode.push_back(regToNum(line[5]));
       }
       else {
-	std::cout << "Error: invalid argument for instruction '" << instName << "'\n";
+        std::cout << "Error: invalid argument for instruction '" << instName << "'\n";
       }
     }
   }
@@ -853,22 +1103,22 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     }
     else {  //check if argument is a valid 8-bit value
       try {
-	int arg = rewriteNum(line.substr(4, line.find(" ", 5)));
-	if(arg > 255 || arg < 0) {
-	  std::cout << "Error: argument is not an unsigned 8 bit integer\n";
-	}
-	else {
-	  machineCode.push_back(arg);
-	}
+        int arg = rewriteNum(line.substr(4, line.find(" ", 5)));
+        if(arg > 255 || arg < 0) {
+          std::cout << "Error: argument is not an unsigned 8 bit integer\n";
+        }
+        else {
+          machineCode.push_back(arg);
+        }
       }
       catch (int e) {
-	if(e == -1) {
-	  std::cout << "Error: invalid numeric prefix";
-	  //error: ...
-	}
+        if(e == -1) {
+          std::cout << "Error: invalid numeric prefix";
+          //error: ...
+        }
       }
       catch (...) {
-	std::cout << "Error: argument could not be parsed as a number\n";
+        std::cout << "Error: argument could not be parsed as a number\n";
       }
     }
   }
@@ -880,25 +1130,25 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     }
     else {  //check if argument is a valid 8-bit value
       try {
-	int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
-	if(arg > 255 || arg < 0) {
-	  std::cout << "Error: argument is not an unsigned 8 bit integer\n";
-	}
-	else {
-	  machineCode.push_back(arg);
-	}
+        int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
+        if(arg > 255 || arg < 0) {
+          std::cout << "Error: argument is not an unsigned 8 bit integer\n";
+        }
+        else {
+          machineCode.push_back(arg);
+        }
       }
       catch (int e) {
-	if(e == -1) {
-	  std::cout << "Error: invalid numeric prefix";
-	  //error: ...
-	}
+        if(e == -1) {
+          std::cout << "Error: invalid numeric prefix";
+          //error: ...
+        }
       }
       catch (...) {
-	std::cout << "Error: argument could not be parsed as a number\n";
+        std::cout << "Error: argument could not be parsed as a number\n";
       }
     }
-    
+
   }
   else if(instName == "ADI") {
     machineCode.push_back(0x54);
@@ -913,10 +1163,10 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     else {
       machineCode.push_back(0x56);
       if(isReg(line[4])) {
-	machineCode.push_back(regToNum(line[4]));
+        machineCode.push_back(regToNum(line[4]));
       }
       else {
-	std::cout << "Error: invalid argument for instruction '" << instName << "'\n";
+        std::cout << "Error: invalid argument for instruction '" << instName << "'\n";
       }
     }
   }
@@ -927,10 +1177,10 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     else {
       machineCode.push_back(0x57);
       if(isReg(line[5])) {
-	machineCode.push_back(regToNum(line[5]));
+        machineCode.push_back(regToNum(line[5]));
       }
       else {
-	std::cout << "Error: invalid argument for instruction '" << instName << "'\n";
+        std::cout << "Error: invalid argument for instruction '" << instName << "'\n";
       }
     }
   }
@@ -942,22 +1192,22 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     }
     else {  //check if argument is a valid 8-bit value
       try {
-	int arg = rewriteNum(line.substr(4, line.find(" ", 5)));
-	if(arg > 255 || arg < 0) {
-	  std::cout << "Error: argument is not an unsigned 8 bit integer\n";
-	}
-	else {
-	  machineCode.push_back(arg);
-	}
+        int arg = rewriteNum(line.substr(4, line.find(" ", 5)));
+        if(arg > 255 || arg < 0) {
+          std::cout << "Error: argument is not an unsigned 8 bit integer\n";
+        }
+        else {
+          machineCode.push_back(arg);
+        }
       }
       catch (int e) {
-	if(e == -1) {
-	  std::cout << "Error: invalid numeric prefix";
-	  //error: ...
-	}
+        if(e == -1) {
+          std::cout << "Error: invalid numeric prefix";
+          //error: ...
+        }
       }
       catch (...) {
-	std::cout << "Error: argument could not be parsed as a number\n";
+        std::cout << "Error: argument could not be parsed as a number\n";
       }
     }
   }
@@ -969,22 +1219,22 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     }
     else {  //check if argument is a valid 8-bit value
       try {
-	int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
-	if(arg > 255 || arg < 0) {
-	  std::cout << "Error: argument is not an unsigned 8 bit integer\n";
-	}
-	else {
-	  machineCode.push_back(arg);
-	}
+        int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
+        if(arg > 255 || arg < 0) {
+          std::cout << "Error: argument is not an unsigned 8 bit integer\n";
+        }
+        else {
+          machineCode.push_back(arg);
+        }
       }
       catch (int e) {
-	if(e == -1) {
-	  std::cout << "Error: invalid numeric prefix";
-	  //error: ...
-	}
+        if(e == -1) {
+          std::cout << "Error: invalid numeric prefix";
+          //error: ...
+        }
       }
       catch (...) {
-	std::cout << "Error: argument could not be parsed as a number\n";
+        std::cout << "Error: argument could not be parsed as a number\n";
       }
     }
   }
@@ -1001,10 +1251,10 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     else {
       machineCode.push_back(0x5c);
       if(isReg(line[5])) {
-	machineCode.push_back(regToNum(line[5]));
+        machineCode.push_back(regToNum(line[5]));
       }
       else {
-	std::cout << "Error: invalid argument for instruction '" << instName << "'\n";
+        std::cout << "Error: invalid argument for instruction '" << instName << "'\n";
       }
     }
   }
@@ -1016,23 +1266,23 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     }
     else {  //check if argument is a valid 8-bit value
       try {
-	int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
-	if(arg > 255 || arg < 0) {
-	  std::cout << "Error: argument is not an unsigned 8 bit integer\n";
-	  return -1;
-	}
-	else {
-	  machineCode.push_back(arg);
-	}
+        int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
+        if(arg > 255 || arg < 0) {
+          std::cout << "Error: argument is not an unsigned 8 bit integer\n";
+          return -1;
+        }
+        else {
+          machineCode.push_back(arg);
+        }
       }
       catch (int e) {
-	if(e == -1) {
-	  std::cout << "Error: invalid numeric prefix";
-	  //error: ...
-	}
+        if(e == -1) {
+          std::cout << "Error: invalid numeric prefix";
+          //error: ...
+        }
       }
       catch (...) {
-	std::cout << "Error: argument could not be parsed as a number\n";
+        std::cout << "Error: argument could not be parsed as a number\n";
       }
     }
   }
@@ -1047,10 +1297,10 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     else {
       machineCode.push_back(0x70);
       if(isReg(line[4])) {
-	machineCode.push_back(regToNum(line[4]));
+        machineCode.push_back(regToNum(line[4]));
       }
       else {
-	std::cout << "Error: invalid argument for instruction '" << instName << "'\n";
+        std::cout << "Error: invalid argument for instruction '" << instName << "'\n";
       }
     }
   }
@@ -1062,22 +1312,22 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     }
     else {  //check if argument is a valid 8-bit value
       try {
-	int arg = rewriteNum(line.substr(4, line.find(" ", 5)));
-	if(arg > 255 || arg < 0) {
-	  std::cout << "Error: argument is not an unsigned 8 bit integer\n";
-	}
-	else {
-	  machineCode.push_back(arg);
-	}
+        int arg = rewriteNum(line.substr(4, line.find(" ", 5)));
+        if(arg > 255 || arg < 0) {
+          std::cout << "Error: argument is not an unsigned 8 bit integer\n";
+        }
+        else {
+          machineCode.push_back(arg);
+        }
       }
       catch (int e) {
-	if(e == -1) {
-	  std::cout << "Error: invalid numeric prefix";
-	  //error: ...
-	}
+        if(e == -1) {
+          std::cout << "Error: invalid numeric prefix";
+          //error: ...
+        }
       }
       catch (...) {
-	std::cout << "Error: argument could not be parsed as a number\n";
+        std::cout << "Error: argument could not be parsed as a number\n";
       }
     }
   }
@@ -1091,10 +1341,10 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     else {
       machineCode.push_back(0x73);
       if(isReg(line[5])) {
-	machineCode.push_back(regToNum(line[5]));
+        machineCode.push_back(regToNum(line[5]));
       }
       else {
-	std::cout << "Error: invalid argument for instruction '" << instName << "'\n";
+        std::cout << "Error: invalid argument for instruction '" << instName << "'\n";
       }
     }
   }
@@ -1106,22 +1356,22 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     }
     else {  //check if argument is a valid 8-bit value
       try {
-	int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
-	if(arg > 255 || arg < 0) {
-	  std::cout << "Error: argument is not an unsigned 8 bit integer\n";
-	}
-	else {
-	  machineCode.push_back(arg);
-	}
+        int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
+        if(arg > 255 || arg < 0) {
+          std::cout << "Error: argument is not an unsigned 8 bit integer\n";
+        }
+        else {
+          machineCode.push_back(arg);
+        }
       }
       catch (int e) {
-	if(e == -1) {
-	  std::cout << "Error: invalid numeric prefix";
-	  //error: ...
-	}
+        if(e == -1) {
+          std::cout << "Error: invalid numeric prefix";
+          //error: ...
+        }
       }
       catch (...) {
-	std::cout << "Error: argument could not be parsed as a number\n";
+        std::cout << "Error: argument could not be parsed as a number\n";
       }
     }
   }
@@ -1135,10 +1385,10 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     else {
       machineCode.push_back(0x76);
       if(isReg(line[5])) {
-	machineCode.push_back(regToNum(line[5]));
+        machineCode.push_back(regToNum(line[5]));
       }
       else {
-	std::cout << "Error: invalid argument for instruction '" << instName << "'\n";
+        std::cout << "Error: invalid argument for instruction '" << instName << "'\n";
       }
     }
   }
@@ -1150,22 +1400,22 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     }
     else {  //check if argument is a valid 8-bit value
       try {
-	int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
-	if(arg > 255 || arg < 0) {
-	  std::cout << "Error: argument is not an unsigned 8 bit integer\n";
-	}
-	else {
-	  machineCode.push_back(arg);
-	}
+        int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
+        if(arg > 255 || arg < 0) {
+          std::cout << "Error: argument is not an unsigned 8 bit integer\n";
+        }
+        else {
+          machineCode.push_back(arg);
+        }
       }
       catch (int e) {
-	if(e == -1) {
-	  std::cout << "Error: invalid numeric prefix";
-	  //error: ...
-	}
+        if(e == -1) {
+          std::cout << "Error: invalid numeric prefix";
+          //error: ...
+        }
       }
       catch (...) {
-	std::cout << "Error: argument could not be parsed as a number\n";
+        std::cout << "Error: argument could not be parsed as a number\n";
       }
     }
   }
@@ -1179,10 +1429,10 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     else {
       machineCode.push_back(0x79);
       if(isReg(line[5])) {
-	machineCode.push_back(regToNum(line[5]));
+        machineCode.push_back(regToNum(line[5]));
       }
       else {
-	std::cout << "Error: invalid argument for instruction '" << instName << "'\n";
+        std::cout << "Error: invalid argument for instruction '" << instName << "'\n";
       }
     }
   }
@@ -1194,22 +1444,22 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     }
     else {  //check if argument is a valid 8-bit value
       try {
-	int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
-	if(arg > 255 || arg < 0) {
-	  std::cout << "Error: argument is not an unsigned 8 bit integer\n";
-	}
-	else {
-	  machineCode.push_back(arg);
-	}
+        int arg = rewriteNum(line.substr(5, line.find(" ", 6)));
+        if(arg > 255 || arg < 0) {
+          std::cout << "Error: argument is not an unsigned 8 bit integer\n";
+        }
+        else {
+          machineCode.push_back(arg);
+        }
       }
       catch (int e) {
-	if(e == -1) {
-	  std::cout << "Error: invalid numeric prefix";
-	  //error: ...
-	}
+        if(e == -1) {
+          std::cout << "Error: invalid numeric prefix";
+          //error: ...
+        }
       }
       catch (...) {
-	std::cout << "Error: argument could not be parsed as a number\n";
+        std::cout << "Error: argument could not be parsed as a number\n";
       }
     }
   }
@@ -1224,22 +1474,22 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     }
     else {  //check if argument is a valid 8-bit value
       try {
-	int arg = rewriteNum(line.substr(4, line.find(" ", 5)));
-	if(arg > 255 || arg < 0) {
-	  std::cout << "Error: argument is not an unsigned 8 bit integer\n";
-	}
-	else {
-	  machineCode.push_back(arg);
-	}
+        int arg = rewriteNum(line.substr(4, line.find(" ", 5)));
+        if(arg > 255 || arg < 0) {
+          std::cout << "Error: argument is not an unsigned 8 bit integer\n";
+        }
+        else {
+          machineCode.push_back(arg);
+        }
       }
       catch (int e) {
-	if(e == -1) {
-	  std::cout << "Error: invalid numeric prefix";
-	  //error: ...
-	}
+        if(e == -1) {
+          std::cout << "Error: invalid numeric prefix";
+          //error: ...
+        }
       }
       catch (...) {
-	std::cout << "Error: argument could not be parsed as a number\n";
+        std::cout << "Error: argument could not be parsed as a number\n";
       }
     }
   }
@@ -1254,22 +1504,22 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     }
     else {  //check if argument is a valid 8-bit value
       try {
-	int arg = rewriteNum(line.substr(4, line.find(" ", 5)));
-	if(arg > 255 || arg < 0) {
-	  std::cout << "Error: argument is not an unsigned 8 bit integer\n";
-	}
-	else {
-	  machineCode.push_back(arg);
-	}
+        int arg = rewriteNum(line.substr(4, line.find(" ", 5)));
+        if(arg > 255 || arg < 0) {
+          std::cout << "Error: argument is not an unsigned 8 bit integer\n";
+        }
+        else {
+          machineCode.push_back(arg);
+        }
       }
       catch (int e) {
-	if(e == -1) {
-	  std::cout << "Error: invalid numeric prefix";
-	  //error: ...
-	}
+        if(e == -1) {
+          std::cout << "Error: invalid numeric prefix";
+          //error: ...
+        }
       }
       catch (...) {
-	std::cout << "Error: argument could not be parsed as a number\n";
+        std::cout << "Error: argument could not be parsed as a number\n";
       }
     }
   }
@@ -1284,22 +1534,22 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     }
     else {  //check if argument is a valid 8-bit value
       try {
-	int arg = rewriteNum(line.substr(4, line.find(" ", 5)));
-	if(arg > 255 || arg < 0) {
-	  std::cout << "Error: argument is not an unsigned 8 bit integer\n";
-	}
-	else {
-	  machineCode.push_back(arg);
-	}
+        int arg = rewriteNum(line.substr(4, line.find(" ", 5)));
+        if(arg > 255 || arg < 0) {
+          std::cout << "Error: argument is not an unsigned 8 bit integer\n";
+        }
+        else {
+          machineCode.push_back(arg);
+        }
       }
       catch (int e) {
-	if(e == -1) {
-	  std::cout << "Error: invalid numeric prefix";
-	  //error: ...
-	}
+        if(e == -1) {
+          std::cout << "Error: invalid numeric prefix";
+          //error: ...
+        }
       }
       catch (...) {
-	std::cout << "Error: argument could not be parsed as a number\n";
+        std::cout << "Error: argument could not be parsed as a number\n";
       }
     }
   }
@@ -1314,22 +1564,22 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     }
     else {  //check if argument is a valid 8-bit value
       try {
-	int arg = rewriteNum(line.substr(4, line.find(" ", 5)));
-	if(arg > 255 || arg < 0) {
-	  std::cout << "Error: argument is not an unsigned 8 bit integer\n";
-	}
-	else {
-	  machineCode.push_back(arg);
-	}
+        int arg = rewriteNum(line.substr(4, line.find(" ", 5)));
+        if(arg > 255 || arg < 0) {
+          std::cout << "Error: argument is not an unsigned 8 bit integer\n";
+        }
+        else {
+          machineCode.push_back(arg);
+        }
       }
       catch (int e) {
-	if(e == -1) {
-	  std::cout << "Error: invalid numeric prefix";
-	  //error: ...
-	}
+        if(e == -1) {
+          std::cout << "Error: invalid numeric prefix";
+          //error: ...
+        }
       }
       catch (...) {
-	std::cout << "Error: argument could not be parsed as a number\n";
+        std::cout << "Error: argument could not be parsed as a number\n";
       }
     }
   }
@@ -1344,22 +1594,54 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     }
     else {  //check if argument is a valid 8-bit value
       try {
-	int arg = rewriteNum(line.substr(4, line.find(" ", 5)));
-	if(arg > 255 || arg < 0) {
-	  std::cout << "Error: argument is not an unsigned 8 bit integer\n";
-	}
-	else {
-	  machineCode.push_back(arg);
-	}
+        int arg = rewriteNum(line.substr(4, line.find(" ", 5)));
+        if(arg > 255 || arg < 0) {
+          std::cout << "Error: argument is not an unsigned 8 bit integer\n";
+        }
+        else {
+          machineCode.push_back(arg);
+        }
       }
       catch (int e) {
-	if(e == -1) {
-	  std::cout << "Error: invalid numeric prefix";
-	  //error: ...
-	}
+        if(e == -1) {
+          std::cout << "Error: invalid numeric prefix";
+          //error: ...
+        }
       }
       catch (...) {
-	std::cout << "Error: argument could not be parsed as a number\n";
+        std::cout << "Error: argument could not be parsed as a number\n";
+      }
+    }
+  }
+  else if(instName == "INC") {
+    machineCode.push_back(0x89);
+    if(line.size() < 5) {
+      std::cout << "Error: missing argument for instruction " << instName << " \n";
+      return -1;
+    }
+    else {  //check if argument is a valid register
+      if(isReg(line[4])) {
+        machineCode.push_back(regToNum(line[4]));
+      }
+      else {
+        std::cout << "Error: invalid argument for instruction '" << instName << "'\n";
+        return -1;
+      }
+    }
+  }
+  else if(instName == "DEC") {
+    machineCode.push_back(0x8a);
+    if(line.size() < 5) {
+      std::cout << "Error: missing argument for instruction " << instName << " \n";
+      return -1;
+    }
+    else {  //check if argument is a valid register
+      if(isReg(line[4])) {
+        machineCode.push_back(regToNum(line[4]));
+      }
+      else {
+        std::cout << "Error: invalid argument for instruction '" << instName << "'\n";
+        return -1;
       }
     }
   }
@@ -1373,7 +1655,7 @@ int transformLineToMachineCode(std::vector<char>& machineCode, std::string line,
     std::cout << "Error: invalid instruction '" << instName << "' at line " << lineNum << ".\n";
     return -1;
   }
-  return (machineCode.size() - beginSize);  //number of instructions added
+  return (machineCode.size() - beginSize);  //number of bytes added
 }
 
 bool writeMachineCodeToFile(std::vector<char>& machineCode, std::string filename) {
@@ -1394,7 +1676,7 @@ bool fixLabelJumpPoints(std::vector<char>& machineCode, std::map<std::string, in
   //labelHash contains a list of which line of code each label corresponds to
   //jumpTable contains a list of where a label is needed (in machine code), and which label is needed there
   //codesPerLine tells how many bytes of machine code each line was translated into
-  
+
 
   //first, construct a list of the machine code positions of each line of code
   std::vector<int> cumulativePosition;  // machine code position of each line of code
@@ -1418,16 +1700,16 @@ bool fixLabelJumpPoints(std::vector<char>& machineCode, std::map<std::string, in
       //labelHash[x.second] is label position
       //add label position to starting offset, and write to machineCode[x.first]
       if(labelHash.find(x.second) == labelHash.end()) {
-	std::cout << "Error: Attempt to jump to nonexistant label.\n";
-	return false;
+        std::cout << "Error: Attempt to jump to nonexistant label '"<<x.second<<"'.\n";
+        return false;
       }
       int relativeAddress = labelHash.find(x.second)->second;  //add exception handling here, as an undefined label will currently cause a crash
       int absoluteAddress = relativeAddress + offset;  //offset is the location of the first byte of machine code and thus the location of the first byte of machine code
       machineCode[x.first] = (absoluteAddress & 0xff00) >> 8;
       machineCode[x.first+1] = absoluteAddress & 0xff;
-      
+
       if(labelHash.find(x.second) == labelHash.end()) {
-	std::cout << "Error: couldn't find label\n";
+        std::cout << "Error: couldn't find label\n";
       }
     }
   }
@@ -1435,39 +1717,39 @@ bool fixLabelJumpPoints(std::vector<char>& machineCode, std::map<std::string, in
     std::cout << "Error: invalid label. (or a bug. If you know you didn't make any label mistakes, please contact the developer)\n";
     return false;
   }
-  
+
   //I think that is all
   return true;
 } 
 
 bool isReg(char code) {
   switch(code) {
-  case 'A':
-  case 'B':
-  case 'C':
-  case 'X':
-  case 'Y':
-    return true;
-  default:
-    return false;
+    case 'A':
+    case 'B':
+    case 'C':
+    case 'X':
+    case 'Y':
+      return true;
+    default:
+      return false;
   }
 }
 
 char regToNum(char reg) {
   std::string n;
   switch(reg) {
-  case 'A':
-    return 0x0;
-  case 'B':
-    return 0x1;
-  case 'C':
-    return 0x2;
-  case 'X':
-    return 0x3;
-  case 'Y':
-    return 0x4;
-  default:
-    n = "regToNum(): Invalid register " + reg;
-    throw std::invalid_argument(n);
+    case 'A':
+      return 0x0;
+    case 'B':
+      return 0x1;
+    case 'C':
+      return 0x2;
+    case 'X':
+      return 0x3;
+    case 'Y':
+      return 0x4;
+    default:
+      n = "regToNum(): Invalid register " + reg;
+      throw std::invalid_argument(n);
   }
 }

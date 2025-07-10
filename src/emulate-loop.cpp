@@ -46,14 +46,21 @@ int beginEmulation(std::string targetDriveName) {
     }
   }
 
-  //memcpy(emulator.adapterGroup.displayAdapter.displayBuf.buffer, buffer, 2000);
   emulator.cpu.memory.writeBlock(0xf800, buffer, 2000);
   initializeTerm();
 
   while(true) {
-    if(!emulator.runCycle())
+    switch(emulator.runCycle()) {
+    default:
+      continue;  //normal operation
+    case 1:  //shutdown
+      return 0;
+    case 2:
+      //halt
+      continue;
+    case 3:
       break;
-    //add debugging thingies
+    }
   }
 
 
@@ -80,4 +87,5 @@ void initializeTerm() {
 
 void resetTerm() {
   tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
+  std::cout << "\x1b[?25h";
 }

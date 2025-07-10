@@ -1,26 +1,27 @@
 #ifndef MEMORY_GROUP_H
 #define MEMORY_GROUP_H
 #include <cstdint>
+#include <array>
 
 class DriveBuffer {
 public:
-  char buffer[1024];  
+  std::array<char, 1024> buffer;  
 };
 
 class DisplayBuffer {
 public:
-  char buffer[2000];
+  std::array<char, 2000> buffer;
   //same as above
 };
 
 class DriveCommandBuffer {
 public:
-  char buffer[8];  //only the first three bytes are used, but I wanted room for further expansion
+  std::array<char, 8> buffer;  //only the first three bytes are used, but I wanted room for further expansion
 };
 
 class KeyboardBuffer {
 public:
-  char buffer[8];  //only the first byte is currently used
+  std::array<char, 8> buffer;  //only the first byte is currently used
 };
 
 class ShutdownBuffer {
@@ -30,7 +31,7 @@ public:
 
 
 class MemoryGroup {
-  char primaryMemory[62464];
+  std::array<char, 62464> primaryMemory;
   DriveBuffer& driveBuf;
   DisplayBuffer& dispBuf;
   KeyboardBuffer& keyBuf;

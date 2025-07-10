@@ -34,13 +34,22 @@
 # Emacs tilde files
 *~
 
-# Emacs autosave files
+# autosave files
 *#
+*.swp
+*.swn
+*.swo
 
 # Linux executables
 assembler
 drivemgr
 xvca
+
+# XVCA Binaries files
+*.x
+
+# XVCA Drives
+*.xdr
 
 # Special directories
 asm/*

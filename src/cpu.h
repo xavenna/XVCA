@@ -11,10 +11,16 @@ class CPU {
 public:
   MemoryGroup memory;
   RegisterGroup registers;
-  void fetchInsToPCB();
+  int fetchInsToPCB();
   bool pcbIsValidIns();
-  void executeInstruction();
+  int executeInstruction();
   CPU(AdapterGroup&);
+  bool interruptsEnabled=true;
+  bool halted=false;
+  
+private:
+  char regNum(int);
+  //std::string instructionName();
 };
 
 

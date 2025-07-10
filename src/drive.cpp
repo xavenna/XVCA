@@ -29,6 +29,9 @@ bool packFolderToDrive(std::string folderName, std::string driveName) {
   //create a file table
   std::string fileTable;
   std::string driveBody;
+
+
+  std::ifstream file;
   
   int currentSector = 2;
   std::string temp;
@@ -38,9 +41,16 @@ bool packFolderToDrive(std::string folderName, std::string driveName) {
     ftemp = entry.path().string();
     //temp is the file to be packed.
     //determine file size
-    long size = fs::file_size(entry.path());
+    file.open(entry.path().string(), std::ios::binary);
+    long size = binFileSize(file); //this is too small for some files
+    file.close();
     int sectors = ceil((float) size / 1024);
-    fileTable += padStringToSize(temp.substr(0, temp.find(".")).substr(0,8) + "." + temp.substr(temp.find(".")+1).substr(0,3), 12);
+    //if file begins with ".", excise this
+    if(temp.size() > 0 && temp[0] == '.') {
+      temp = temp.substr(1);
+    }
+    std::string tfn = temp.substr(0, temp.find(".")).substr(0,8) + "." + temp.substr(temp.find(".")+1).substr(0,3);
+    fileTable += padStringToSize(tfn, 12);
     //add file name to table
     fileTable += padTo2Bytes(currentSector);
     //determine next sector
@@ -53,6 +63,9 @@ bool packFolderToDrive(std::string folderName, std::string driveName) {
     //pad buffer 
     
     driveBody += padStringToSize(buffer, sectors * 1024);
+    if((driveBody.size() % 1024) != 0) {
+      std::cerr << "err\n";
+    }
   }
   //write filetable to file
   fileTable = padStringToSize(fileTable, 1024); //pad filetable (eventually add size check)
@@ -81,10 +94,11 @@ bool addFileToBootSector(std::string driveName, std::string bootFileName) {
   }
 
   //if drive exists, prepare a char* to place its contents into
-  size_t fileSize = fs::file_size(fs::current_path() / driveName);
+  size_t fileSize = fs::file_size(fs::current_path() / driveName) +1;
   char* driveBuffer = new char[fileSize];
 
   //load contents of drive into driveBuffer, then close driveAccess as it is no longer necessary
+  driveAccess.seekg(0);
   driveAccess.read(driveBuffer, fileSize);
   driveAccess.close();
   
@@ -100,7 +114,7 @@ bool addFileToBootSector(std::string driveName, std::string bootFileName) {
   //blASCIItoXSCE(newBuffer, fileSize);   //If I can get this working, then uncomment and fix these lines
 
   //write driveBuffer to drive file
-  driveAccess.write(driveBuffer, fileSize);
+  driveAccess.write(driveBuffer, int(fileSize/1024)*1024);
   delete[] driveBuffer;
   return true;
 }

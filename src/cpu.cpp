@@ -2,28 +2,30 @@
 #include "emulator.h"
 #include <iostream>
 #include <fstream>
+#include <iomanip>
+#include "disassemble.h"
 
 
 
-void CPU::fetchInsToPCB() {  //doesn't worm
+int CPU::fetchInsToPCB() {
   char temp = memory.read(registers.programCounter);
-  //std::cout << std::hex << registers.programCounter << ',' << +(uint8_t)temp << std::dec << '\n';
+  if(registers.PCBPos > registers.PCB.size()) {
+    std::cerr << "Error: PCB Overflow at instruction 0x" << std::hex;
+    std::cerr << registers.programCounter << "\nPCB Contents:";
+    for(auto x : registers.PCB) {std::cerr << +x << " ";}
+    std::cerr << '\n' << std::dec;
+    registers.clearPCB();
+    registers.PCBPos = 0;
+    return -1;
+  }
   registers.PCB[registers.PCBPos] = temp;
   registers.PCBPos++;
   registers.programCounter++;
+  return 0;
 }
 
-void CPU::executeInstruction() { //I believe this is done
-  /*
-#ifdef XV_DEBUG
-  std::cout << "Executing instruction " << std::hex << +registers.PCB[0]
-	    << std::dec << ".\n";
-  std::ofstream name;
-  name.open("./xv.log", std::ios::app);
-  name << "Executing instruction " << +registers.PCB[0] << ".\n";
-  name.close();
-#endif
-  */
+
+int CPU::executeInstruction() {
   uint16_t address = 0;
   char temp8 = 0;
   switch(registers.PCB[0]) {
@@ -51,7 +53,7 @@ void CPU::executeInstruction() { //I believe this is done
       registers.registerA = registers.registerY;
       break;
     default:
-      throw std::invalid_argument("Invalid argument to instruction.");
+      throw std::invalid_argument("Invalid argument to instruction MVRA.");
     }
     break;
   case 0x2:
@@ -357,14 +359,14 @@ void CPU::executeInstruction() { //I believe this is done
     }
     break;
   case 0x43:
-    //JE <a>
-    if(registers.flags.equal) {
+    //JG <a>
+    if(registers.flags.greater) {
       registers.programCounter = (registers.PCB[1] << 8) | registers.PCB[2];
     }
     break;
   case 0x44:
-    //JNE <a>
-    if(!registers.flags.equal) {
+    //JNG <a>
+    if(!registers.flags.greater) {
       registers.programCounter = (registers.PCB[1] << 8) | registers.PCB[2];
     }
     break;
@@ -443,6 +445,7 @@ void CPU::executeInstruction() { //I believe this is done
     registers.registerA = address & 0xff;
     registers.flags.zero = (registers.registerA == 0);
     registers.flags.sign = (registers.registerA & 0x80);
+    registers.flags.greater = (address > 0);
     break;
   case 0x52:
     //ADV <v>
@@ -451,6 +454,7 @@ void CPU::executeInstruction() { //I believe this is done
     registers.registerA = address & 0xff;
     registers.flags.zero = (registers.registerA == 0);
     registers.flags.sign = (registers.registerA & 0x80);
+    registers.flags.greater = (address > 0);
     break;
   case 0x53:
     //ADCV <v>
@@ -459,6 +463,7 @@ void CPU::executeInstruction() { //I believe this is done
     registers.registerA = address & 0xff;
     registers.flags.zero = (registers.registerA == 0);
     registers.flags.sign = (registers.registerA & 0x80);
+    registers.flags.greater = (address > 0);
     break;
   case 0x54:
     //ADI
@@ -467,6 +472,7 @@ void CPU::executeInstruction() { //I believe this is done
     registers.registerA = address & 0xff;
     registers.flags.zero = (registers.registerA == 0);
     registers.flags.sign = (registers.registerA & 0x80);
+    registers.flags.greater = (address > 0);
     break;
   case 0x55:
     //ADCI
@@ -475,6 +481,7 @@ void CPU::executeInstruction() { //I believe this is done
     registers.registerA = address & 0xff;
     registers.flags.zero = (registers.registerA == 0);
     registers.flags.sign = (registers.registerA & 0x80);
+    registers.flags.greater = (address > 0);
     break;
   case 0x56:
     //SBR <r>
@@ -502,6 +509,7 @@ void CPU::executeInstruction() { //I believe this is done
     registers.registerA = address & 0xff;
     registers.flags.zero = (registers.registerA == 0);
     registers.flags.sign = (registers.registerA & 0x80);
+    registers.flags.greater = (address > 0);
     break;
   case 0x57:
     //SBCR <r>
@@ -529,6 +537,7 @@ void CPU::executeInstruction() { //I believe this is done
     registers.registerA = address & 0xff;
     registers.flags.zero = (registers.registerA == 0);
     registers.flags.sign = (registers.registerA & 0x80);
+    registers.flags.greater = (address > 0);
     break;
   case 0x58:
     //SBV <v>
@@ -537,6 +546,7 @@ void CPU::executeInstruction() { //I believe this is done
     registers.registerA = address & 0xff;
     registers.flags.zero = (registers.registerA == 0);
     registers.flags.sign = (registers.registerA & 0x80);
+    registers.flags.greater = (address > 0);
     break;
   case 0x59:
     //SBCV <v>
@@ -545,6 +555,7 @@ void CPU::executeInstruction() { //I believe this is done
     registers.registerA = address & 0xff;
     registers.flags.zero = (registers.registerA == 0);
     registers.flags.sign = (registers.registerA & 0x80);
+    registers.flags.greater = (address > 0);
     break;
   case 0x5a:
     //SBI
@@ -553,6 +564,7 @@ void CPU::executeInstruction() { //I believe this is done
     registers.registerA = address & 0xff;
     registers.flags.zero = (registers.registerA == 0);
     registers.flags.sign = (registers.registerA & 0x80);
+    registers.flags.greater = (address > 0);
     break;
   case 0x5b:
     //SBCI
@@ -561,6 +573,7 @@ void CPU::executeInstruction() { //I believe this is done
     registers.registerA = address & 0xff;
     registers.flags.zero = (registers.registerA == 0);
     registers.flags.sign = (registers.registerA & 0x80);
+    registers.flags.greater = (address > 0);
     break;
   case 0x5c:
     //CMPR <r>
@@ -586,6 +599,7 @@ void CPU::executeInstruction() { //I believe this is done
     registers.flags.equal = (temp8 == registers.registerA);
     registers.flags.greater = (temp8 > registers.registerA);
     registers.flags.sign = (registers.registerA-temp8) & 0x80;
+    registers.flags.greater = (temp8 > 0);
     break;
   case 0x5d:
     //CMPV <v>
@@ -593,6 +607,7 @@ void CPU::executeInstruction() { //I believe this is done
     registers.flags.equal = (temp8 == registers.registerA);
     registers.flags.greater = (temp8 > registers.registerA);
     registers.flags.sign = (registers.registerA-temp8) & 0x80;
+    registers.flags.greater = (temp8 > 0);
     break;
   case 0x5e:
     //CMPI
@@ -600,6 +615,7 @@ void CPU::executeInstruction() { //I believe this is done
     registers.flags.equal = (temp8 == registers.registerA);
     registers.flags.greater = (temp8 > registers.registerA);
     registers.flags.sign = (registers.registerA-temp8) & 0x80;
+    registers.flags.greater = (temp8 > 0);
     break;
 
     //////////////////////////
@@ -631,6 +647,7 @@ void CPU::executeInstruction() { //I believe this is done
     registers.registerA |= temp8;
     registers.flags.zero = (registers.registerA == 0);
     registers.flags.sign = (registers.registerA & 0x80);
+    registers.flags.greater = (registers.registerA > 0);
     break;
   case 0x71:
     //ORV <v>
@@ -638,6 +655,7 @@ void CPU::executeInstruction() { //I believe this is done
     registers.registerA |= temp8;
     registers.flags.zero = (registers.registerA == 0);
     registers.flags.sign = (registers.registerA & 0x80);
+    registers.flags.greater = (registers.registerA > 0);
     break;
   case 0x72:
     //ORI
@@ -645,6 +663,7 @@ void CPU::executeInstruction() { //I believe this is done
     registers.registerA |= temp8;
     registers.flags.zero = (registers.registerA == 0);
     registers.flags.sign = (registers.registerA & 0x80);
+    registers.flags.greater = (registers.registerA > 0);
     break;
   case 0x73:
     //ANDR <r>
@@ -670,6 +689,7 @@ void CPU::executeInstruction() { //I believe this is done
     registers.registerA |= temp8;
     registers.flags.zero = (registers.registerA == 0);
     registers.flags.sign = (registers.registerA & 0x80);
+    registers.flags.greater = (registers.registerA > 0);
     break;
   case 0x74:
     //ANDV <v>
@@ -677,6 +697,7 @@ void CPU::executeInstruction() { //I believe this is done
     registers.registerA |= temp8;
     registers.flags.zero = (registers.registerA == 0);
     registers.flags.sign = (registers.registerA & 0x80);
+    registers.flags.greater = (registers.registerA > 0);
     break;
   case 0x75:
     //ANDI
@@ -684,6 +705,7 @@ void CPU::executeInstruction() { //I believe this is done
     registers.registerA |= temp8;
     registers.flags.zero = (registers.registerA == 0);
     registers.flags.sign = (registers.registerA & 0x80);
+    registers.flags.greater = (registers.registerA > 0);
     break;
   case 0x76:
     //XORR <r>
@@ -709,6 +731,7 @@ void CPU::executeInstruction() { //I believe this is done
     registers.registerA |= temp8;
     registers.flags.zero = (registers.registerA == 0);
     registers.flags.sign = (registers.registerA & 0x80);
+    registers.flags.greater = (registers.registerA > 0);
     break;
   case 0x77:
     //XORV <v>
@@ -716,6 +739,7 @@ void CPU::executeInstruction() { //I believe this is done
     registers.registerA |= temp8;
     registers.flags.zero = (registers.registerA == 0);
     registers.flags.sign = (registers.registerA & 0x80);
+    registers.flags.greater = (registers.registerA > 0);
     break;
   case 0x78:
     //XORI
@@ -723,6 +747,7 @@ void CPU::executeInstruction() { //I believe this is done
     registers.registerA |= temp8;
     registers.flags.zero = (registers.registerA == 0);
     registers.flags.sign = (registers.registerA & 0x80);
+    registers.flags.greater = (registers.registerA > 0);
     break;
   case 0x79:
     //NOTR <r>
@@ -748,6 +773,7 @@ void CPU::executeInstruction() { //I believe this is done
     registers.registerA |= temp8;
     registers.flags.zero = (registers.registerA == 0);
     registers.flags.sign = (registers.registerA & 0x80);
+    registers.flags.greater = (registers.registerA > 0);
     break;
   case 0x7a:
     //NOTV <v>
@@ -755,6 +781,7 @@ void CPU::executeInstruction() { //I believe this is done
     registers.registerA |= temp8;
     registers.flags.zero = (registers.registerA == 0);
     registers.flags.sign = (registers.registerA & 0x80);
+    registers.flags.greater = (registers.registerA > 0);
     break;
   case 0x7b:
     //NOTI
@@ -762,6 +789,7 @@ void CPU::executeInstruction() { //I believe this is done
     registers.registerA |= temp8;
     registers.flags.zero = (registers.registerA == 0);
     registers.flags.sign = (registers.registerA & 0x80);
+    registers.flags.greater = (registers.registerA > 0);
     break;
     
     
@@ -805,16 +833,77 @@ void CPU::executeInstruction() { //I believe this is done
     //SPS <a>
     registers.stackPointer = (registers.PCB[1] << 8) | registers.PCB[2];
     break;
+  case 0x89:
+    //INC <r>
+    switch (registers.PCB[1]) {
+    case 0:
+      registers.registerA++;
+      break;
+    case 1:
+      registers.registerB++;
+      break;
+    case 2:
+      registers.registerC++;
+      break;
+    case 3:
+      registers.registerX++;
+      break;
+    case 4:
+      registers.registerY++;
+      break;
+    default:
+      throw std::invalid_argument("Invalid argument to instruction.");
+    }
+    break;
+  case 0x8a:
+    //DEC <r>
+    switch (registers.PCB[1]) {
+    case 0:
+      registers.registerA--;
+      break;
+    case 1:
+      registers.registerB--;
+      break;
+    case 2:
+      registers.registerC--;
+      break;
+    case 3:
+      registers.registerX--;
+      break;
+    case 4:
+      registers.registerY--;
+      break;
+    default:
+      throw std::invalid_argument("Invalid argument to instruction.");
+    }
+    break;
+
+
+    ////////////////////////////////
+    //  MISCELLANEOUS INSTRUCTIONS
+    ////////////////////////////////
+
+  case 0xa0:
+    //EI
+    interruptsEnabled = true;
+    break;
+  case 0xa1:
+    //DI
+    interruptsEnabled = false;
+    break;
 
     //No instructions exist in this gap
 
   case 0xff:
     //HLT
+    halted = true;
+    return -1;
     break;
   default:
     // Invalid opcode
     throw std::invalid_argument("Error: invalid opcode found");
   }
+  return 0;
 }
 
 
@@ -931,6 +1020,7 @@ bool CPU::pcbIsValidIns() {
   }
   return false;
 }
+
 
 CPU::CPU(AdapterGroup& ad) : memory{ad.driveAdapter.driveBuf, ad.displayAdapter.displayBuf, ad.keyboardAdapter.keyboardBuffer, ad.driveAdapter.drcBuf, ad.shutdownBuf} {
 

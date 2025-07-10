@@ -1,6 +1,8 @@
 #include "memory-group.h"
+#include <iostream>
 
 void MemoryGroup::write(uint16_t address, const char data) {
+  //std::cerr << "Writing 0x"<<std::hex<<+(data & 0xff)<<" to address 0x"<<address<<std::dec<<"\n";
   if(address < 0xf400) {
     primaryMemory[address] = data;
   }
@@ -29,27 +31,28 @@ void MemoryGroup::write(uint16_t address, const char data) {
   }
 }
 char MemoryGroup::read(uint16_t address) const {
+  //std::cerr << "Reading from address 0x"<<std::hex<<address<<std::dec<<"\n";
   char temp;
-  if(address < 62464) {
+  if(address < 0xf400) {
     temp = primaryMemory[address];
   }
-  else if(address >= 62464 && address < 63488) {
+  else if(address >= 0xf400 && address < 0xf800) {
     //drive buffer
-    temp = driveBuf.buffer[address-62464];
+    temp = driveBuf.buffer[address-0xf400];
   }
-  else if(address >= 63488 && address < 65488) {
+  else if(address >= 0xf800 && address < 0xffd0) {
     //display buffer
-    temp = dispBuf.buffer[address-63488];
+    temp = dispBuf.buffer[address-0xf800];
   }
-  else if(address >= 65488 && address < 65496) {
+  else if(address >= 0xffd0 && address < 0xffd8) {
     //keyboard buffer
-    temp = keyBuf.buffer[address-65488];
+    temp = keyBuf.buffer[address-0xffd0];
   }
-  else if(address >= 65496 && address < 65504) {
+  else if(address >= 0xffd8 && address < 0xffe0) {
     //drive command buffer
     //write-only
     //actually, no, arguments...
-    temp = keyBuf.buffer[address-65496];
+    temp = keyBuf.buffer[address-0xffd8];
   }
   else if(address == 65535) {
     //shutdown buffer

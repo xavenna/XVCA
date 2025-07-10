@@ -2,7 +2,7 @@
 # https://stackoverflow.com/a/23418196
 
 CXX = g++
-CPPFLAGS = -Wall -Wextra -fexceptions -std=c++17
+CPPFLAGS = -Wall -Wextra -fexceptions -std=c++17 -DXV_DEBUG
 
 ASMEXE = assembler
 XVEXE = xvca
@@ -31,11 +31,11 @@ OBJS:=$(patsubst src/%.cpp, $(OBJ_DIR)/%.o, $(SRCS))
 
 ASMOBJS := $(addprefix $(OBJ_DIR)/,assembler.o util.o assembler-util.o file-utils.o)
 
-XVOBJS = $(addprefix $(OBJ_DIR)/,emulator.o xvca.o util.o cpu.o register-group.o display-adapter.o file-utils.o emulate-loop.o drive.o memory-group.o flags.o keyboard-adapter.o drive-adapter.o adapter-group.o)
+XVOBJS = $(addprefix $(OBJ_DIR)/,emulator.o xvca.o util.o cpu.o register-group.o display-adapter.o file-utils.o emulate-loop.o drive.o memory-group.o flags.o keyboard-adapter.o drive-adapter.o adapter-group.o disassemble.o)
 
 DROBJS = $(addprefix $(OBJ_DIR)/,drivemgr.o util.o file-utils.o drive.o encoding.o)
 
-.PHONY : all clean tilde debug release remake asm emu drive
+.PHONY : all clean tilde debug release remake asm emu drive boot
 
 all: asm emu drive
 
@@ -59,6 +59,15 @@ $(OBJ_DIR)/%.o: src/%.cpp
 	$(CXX) $(CPPFLAGS) -c $< -o $@
 
 -include $(AUTODEPS)
+
+boot: boot.x boot.xdr
+
+boot.x : asm/bootloader.asm
+	./assembler -n -j0 -iasm/bootloader.asm -oboot.x
+
+boot.xdr: asm/boot-sector.asm
+	./assembler -n -j9000 -iasm/boot-sector.asm -obsec.x
+	./drivemgr -b boot.xdr bsec.x
 
 remake: clean all
 

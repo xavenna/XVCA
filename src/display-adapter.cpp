@@ -6,6 +6,7 @@
 #include "display-adapter.h"
 
 void DisplayAdapter::updateDisplay() {
+  //this is going to be slow
   //this is a partial version of the display adapter created to test the system
   const int lineSize{40};
   const int lineNum{25};

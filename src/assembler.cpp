@@ -35,37 +35,37 @@ int main(int argc, char** argv) {
     if(arg.substr(0,2) == "-i") {
       //inputfile
       if(arg.size() > 2) {
-	infile = arg.substr(2);
+        infile = arg.substr(2);
       }
       else {
-	std::cout << "Error: flag '-i' requires an argument.\n";
-	return 1;
+        std::cout << "Error: flag '-i' requires an argument.\n";
+        return 1;
       }
     }
     else if(arg.substr(0,2) == "-o") {
       //outfile
       if(arg.size() > 2) {
-	outfile = arg.substr(2);
+        outfile = arg.substr(2);
       }
       else {
-	std::cout << "Error: flag '-o' requires an argument.\n";
-	return 1;
+        std::cout << "Error: flag '-o' requires an argument.\n";
+        return 1;
       }
     }
     else if(arg.substr(0,2) == "-j") {
       //jump point
       if(arg.size() > 2) {
-	try {
-	  jumpPoint = std::stoul(arg.substr(2));
-	}
-	catch (...) {
-	  std::cout << "Error: flag '-j' requires a numeric argument.\n";
-	  return 1;
-	}
+        try {
+          jumpPoint = std::stoul(arg.substr(2), nullptr, 0x10);
+        }
+        catch (...) {
+          std::cout << "Error: flag '-j' requires a numeric argument.\n";
+          return 1;
+        }
       }
       else {
-	std::cout << "Error: flag '-j' requires an argument.\n";
-	return 1;
+        std::cout << "Error: flag '-j' requires an argument.\n";
+        return 1;
       }
     }
     else if(arg == "-g") {
@@ -91,11 +91,24 @@ int main(int argc, char** argv) {
     //display help
     std::cout << "XVCA Assembler: version Test0.0\n";
     std::cout << "Usage: " << argv[0] << " <input file> <output file>\n";
-    std::cout << "TODO: Update help menu, it is outdated\n";
+    std::cout << "Flags:\n";
+    std::cout << "-g\tGenerate Jump table (for external use). No arguments\n";
+    std::cout << "-n\tDon't add a header to the binary. Primarily for boot-sector or bootloader code. No arguments\n";
+    std::cout << "-h\tDisplay this help menu. No arguments\n";
+    std::cout << "-i\tSpecify input assembly file. Usage: -i<filename>\n";
+    std::cout << "-o\tSpecify output destination. Usage: -o<filename>\n";
+    std::cout << "-j\tSpecify jump offset (program load point). Usage: -j<offset>\n";
+    std::cout << "Eventually, -t will be implemented to allow use of external jumptables.\n";
+
   }
   else if(!infile.empty() && !outfile.empty()) {
+    //call the preprocessor, write the result to another file
+    std::string midfile = infile + ".px";
+    if(!preprocess(infile, midfile)) {
+    
+    }
     //assemble
-    if(!assemble(infile, outfile, jumpPoint, generateJumpTable, makeHeader)) {
+    if(!assemble(midfile, outfile, jumpPoint, generateJumpTable, makeHeader)) {
       std::cout << "Assembly failed.\n";
       return 1;
     }
@@ -136,10 +149,15 @@ bool assemble(std::string filename, std::string outfile, unsigned addrOff, bool 
       //line is a comment, disregard
     }
     else {
-      lines.push_back(line.substr(1));  //each instruction line begins with a tab, which is trimmed here
+      while(line.size() >= 1 && isEmpty(line[0])) {
+        line = line.substr(1);
+      }
+      lines.push_back(line);  //each instruction line begins with a tab, which is trimmed here
       counter++;  //counter is only incremented if a label isn't found so labels point to the following line
     }
   }
+
+
   //now transform each line into the corresponding machine code instruction(s)
   for(size_t i=0;i<lines.size();i++) {
     int value = transformLineToMachineCode(machineCode, lines[i], jumpHash, i);
@@ -151,6 +169,7 @@ bool assemble(std::string filename, std::string outfile, unsigned addrOff, bool 
     codesPerLine.push_back(value);
   }
 
+  //this function is basically the linker, so make it able to link several files together
   fixLabelJumpPoints(machineCode, labelHash, jumpHash, codesPerLine, addrOff);
   //TODO: Make fixLabelJumpPoints able to create a label table (e.g. for syscalls or driver functions)
 

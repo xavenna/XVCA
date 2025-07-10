@@ -3,16 +3,18 @@
 #include <iostream>
 
 
-bool KeyboardAdapter::updateBuffer() {
-  //THIS DOESN"T WORK, REWRITE
-  //std::cout << "updating buffer\n";
+int KeyboardAdapter::updateBuffer() {
   char c = 0;
   std::string buf;
   do {
     read(STDIN_FILENO, &c, 1);
     if(c == 0x03) {
-      //C-c: interrupt, shutdown
-      return false;
+      //C-c: shutdown
+      return 1;
+    }
+    else if(c == 0x04) {
+      //C-d: trigger a forced interrupt.
+      return 4;
     }
     if(c != 0x0) {
       buf += c;
@@ -42,6 +44,10 @@ bool KeyboardAdapter::updateBuffer() {
   for(int i=0;i<8;i++) {
     buf += '\0';
   }
-  memcpy(keyboardBuffer.buffer, buf.c_str(), 8);
-  return true;
+  if(!strncmp(buf.c_str(),keyboardBuffer.buffer.begin(), keyboardBuffer.buffer.size())) {
+    return 0;
+  }
+  memcpy(keyboardBuffer.buffer.data(), buf.c_str(), 8);
+  std::copy(buf.begin(), buf.end(), keyboardBuffer.buffer.begin());
+  return 3;
 }

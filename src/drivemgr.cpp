@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
       //List files contained in a drive
       //Usage: drivemgr -l <drive>
       if(fileExists(arg2) && isValidDriveName(arg2)) {
-	listDriveFiles(arg2);
+        listDriveFiles(arg2);
       }
       else {
 	std::cout << "Error: invald usage of the list command.\n";
