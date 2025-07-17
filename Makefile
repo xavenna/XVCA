@@ -35,6 +35,8 @@ XVOBJS = $(addprefix $(OBJ_DIR)/,emulator.o xvca.o util.o cpu.o register-group.o
 
 DROBJS = $(addprefix $(OBJ_DIR)/,drivemgr.o util.o file-utils.o drive.o encoding.o)
 
+DRIVEFILES = $(wildcard bootdr/*)
+
 .PHONY : all clean tilde debug release remake asm emu drive boot
 
 all: asm emu drive
@@ -65,9 +67,12 @@ boot: boot.x boot.xdr
 boot.x : asm/bootloader.asm
 	./assembler -n -j0 -iasm/bootloader.asm -oboot.x
 
-boot.xdr: asm/boot-sector.asm
-	./assembler -n -j9000 -iasm/boot-sector.asm -obsec.x
+boot.xdr: bsec.x $(DRIVEFILES)
+	./drivemgr -p bootdr/ boot.xdr
 	./drivemgr -b boot.xdr bsec.x
+
+bsec.x: asm/boot-sector.asm
+	./assembler -n -j9000 -iasm/boot-sector.asm -obsec.x
 
 remake: clean all
 

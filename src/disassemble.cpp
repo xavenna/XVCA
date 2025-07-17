@@ -13,7 +13,7 @@ int disassemble(const std::string& file) {
   std::array<uint8_t, 4> pcb;
   uint8_t pos=0;
 
-  std::cerr << "Disassembling:\n";
+  std::cerr << "Disassembling: Asm size="<<std::hex<<bin.size() <<"\n";
   for(int i=0;i<bin.size();i++) {
     pcb[pos] = bin[i];
     pos++;
@@ -45,20 +45,19 @@ char regNum(int r) {
     case 1:
       o = 'B';
       break;
-    case 3:
+    case 2:
       o = 'C';
       break;
-    case 4:
+    case 3:
       o = 'X';
       break;
-    case 5: 
+    case 4: 
       o = 'Y';
       break;
     default:
       o = 0;
       break;
   }
-  //std::cerr << "turning '"<<r<<"' to '"<<o<<"'\n";
   return o;
 }
 
@@ -100,10 +99,13 @@ bool pcbIsValidIns(std::array<uint8_t,4> pcb, uint8_t pos) {
     case 0x55:
     case 0x5a:
     case 0x5b:
+    case 0x5e:
     case 0x72:
     case 0x75:
     case 0x78:
     case 0x7b:
+    case 0xa0: //I don't think this is implemented yet
+    case 0xa1: //likewise
     case 0xff:
       return true;
     default:
@@ -144,6 +146,8 @@ bool pcbIsValidIns(std::array<uint8_t,4> pcb, uint8_t pos) {
     case 0x82:
     case 0x84:
     case 0x86:
+    case 0x89:
+    case 0x8a:
       return true;
     default:
       return false;
@@ -161,6 +165,7 @@ bool pcbIsValidIns(std::array<uint8_t,4> pcb, uint8_t pos) {
     case 0x17:
     case 0x18:
     case 0x19:
+    case 0x1f:
     case 0x40:
     case 0x41:
     case 0x42:
@@ -237,6 +242,10 @@ void instructionName(std::array<uint8_t,4> pcb, uint8_t pos) {
   case 0x1e:
     std::cout << "MV";
     std::cout << regNum(pcb[0]-0x1a) << "I";
+    break;
+  case 0x1f:
+    std::cout << "MIXY ";
+    std::cout << std::setw(2) << +(pcb[1]) << std::setw(2) << +pcb[2];
     break;
 
     //////////////////////
@@ -417,7 +426,6 @@ void instructionName(std::array<uint8_t,4> pcb, uint8_t pos) {
     break;
   case 0x84:
     std::cout << "PCI " << std::setw(2) << +pcb[1];
-    //name = std::string("PCI ") + std::to_string(+pcb[1]);
     break;
   case 0x85:
     std::cout << "PCIA";
@@ -432,6 +440,14 @@ void instructionName(std::array<uint8_t,4> pcb, uint8_t pos) {
   case 0x88:
     //SPS <a>
     std::cout << "SPS " << std::setw(4) << (+(pcb[1] << 8) | pcb[2]);
+    break;
+  case 0x89:
+    //INC <r>
+    std::cout << "INC " << regNum(pcb[1]);
+    break;
+  case 0x8a:
+    //DEC <r>
+    std::cout << "DEC " << regNum(pcb[1]);
     break;
 
     //No instructions exist in this gap

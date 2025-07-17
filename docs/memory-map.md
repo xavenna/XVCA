@@ -24,7 +24,7 @@ Main Memory Subdivisions:
 | 0x1000 - 0x8fff | 0x8000     | Gen Memory | User-space. Programs are loaded to 0x1000 |
 | 0x9000 - 0x93ff | 0x400      | Boot sector| Where bootloader puts bootsector |
 | 0x93ff - 0x97ff | 0x400      | OS Varcache| Space for OS temp variables |
-| 0x9400 - 0xf3ff | 0x5c00     | OS Space   | Reserved for the OS, Drivers, etc. |
+| 0x9800 - 0xf3ff | 0x5c00     | OS Space   | Reserved for the OS, Drivers, etc. |
 
 
 

@@ -7,8 +7,9 @@ void RegisterGroup::clearPCB() {
   PCBPos = 0;
 }
 
+//if Y > 0x7f, the first 8 bits are set to 0xff. I have no idea why
 uint16_t RegisterGroup::XY() {
-  return (registerX << 8) | registerY;
+  return ((registerX << 8) | registerY);
 }
 void RegisterGroup::decSP() {
   if(stackPointer == 0) {

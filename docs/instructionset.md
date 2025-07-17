@@ -13,6 +13,10 @@ DI
 INC <r>
 DEC <r>
 
+Move address to XY
+
+some way to move a memory address to a register
+
 <v> represents a value, <a> represents an address, <r> represents a register
 
 * 00 - A
@@ -56,6 +60,7 @@ DEC <r>
 | 1C  | MVCI     | Move the value stored in XY to C |
 | 1D  | MVXI     | Move the value stored in XY to X |
 | 1E  | MVYI     | Move the value stored in XY to Y |
+| 1F  | MIXY <a> | Move the address pointer to XY   |
 
 ### Stack Instructions
 
@@ -137,13 +142,13 @@ DEC <r>
 | Num | ASM Form | Description |
 --------------------------------
 | 80  | SPI <v>  | Increments Stack pointer by value |
-| 81  | SPIA <v> | Increments Stack pointer by A |
+| 81  | SPIA     | Increments Stack pointer by A |
 | 82  | SPD <v>  | Decrements Stack pointer by value |
-| 83  | SPDA <v> | Decrements Stack pointer by A |
+| 83  | SPDA     | Decrements Stack pointer by A |
 | 84  | PCI <v>  | Increments Program counter by value |
-| 85  | PCIA <v> | Increments Program counter by A |
+| 85  | PCIA     | Increments Program counter by A |
 | 86  | PCD <v>  | Decrements Program counter by value |
-| 87  | PCDA <v> | Decrements Program counter by A |
+| 87  | PCDA     | Decrements Program counter by A |
 | 88  | SPS <a>  | Sets stack pointer to specified address |
 | 89  | INC <r>  | Increments register |
 | 8A  | DEC <r>  | Decrements register |

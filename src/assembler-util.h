@@ -8,6 +8,7 @@ struct forEntry {
   unsigned line;
   char reg;
   int increment;
+  int endval;
 };
 int rewriteNum(std::string);
 int transformLineToMachineCode(std::vector<char>&, std::string, std::map<int, std::string>&, int);

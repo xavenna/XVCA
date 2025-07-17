@@ -26,6 +26,16 @@ int Emulator::runCycle() {
       switch(cpu.executeInstruction()) {
       case -1:
         //halt, do nothing until an interrupt is detected?
+        //Display some diagnostic information
+        std::cerr << std::hex<<std::setfill('0');
+        std::cerr << "PC:"<<std::setw(4)<<cpu.registers.programCounter << '\n';
+        std::cerr << "SP:"<<std::setw(4)<<cpu.registers.stackPointer << '\n';
+        std::cerr << "A:"<<std::setw(2)<<(+cpu.registers.registerA & 0xff) << '\n';
+        std::cerr << "B:"<<std::setw(2)<<(+cpu.registers.registerB & 0xff) << '\n';
+        std::cerr << "C:"<<std::setw(2)<<(+cpu.registers.registerC & 0xff) << '\n';
+        std::cerr << "X:"<<std::setw(2)<<(+cpu.registers.registerX & 0xff) << '\n';
+        std::cerr << "Y:"<<std::setw(2)<<(+cpu.registers.registerY & 0xff) << '\n';
+        std::cerr << std::dec;
         cpu.registers.clearPCB();
         return 2;
       default:
@@ -39,6 +49,7 @@ int Emulator::runCycle() {
     }
     cycleNum++;
 
+  } else {
   }
 
   //update hardware
@@ -100,6 +111,13 @@ int Emulator::updateHardware() {
     std::cerr << "Shutting down\n";
     //shutdown
     return 1;
+  } else if(adapterGroup.shutdownBuf.buffer == static_cast<char>(0xfe)) {
+    std::cerr << "Dumping memory and crashing\n";
+    char buffer[0x10000];
+    cpu.memory.readBlock(0, buffer, sizeof(buffer));
+    std::ofstream dump("dump.bin", std::ios::binary);
+    dump.write(buffer, sizeof(buffer));
+    return 1;
   }
 
 
@@ -122,7 +140,9 @@ int Emulator::updateHardware() {
   //check for drive calls
   
   //if I want this emulator to get any kind of reasonable performance, this needs to be optimized. (maybe use threads)
-  adapterGroup.displayAdapter.updateDisplay();
+  if(!cpu.halted) {
+    adapterGroup.displayAdapter.updateDisplay();
+  }
   int interrupt = 0;
   interrupt = adapterGroup.keyboardAdapter.updateBuffer();
 

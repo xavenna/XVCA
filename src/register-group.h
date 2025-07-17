@@ -7,11 +7,11 @@
 
 class RegisterGroup {
 public:
-  char registerA;
-  char registerB;
-  char registerC;
-  char registerX;
-  char registerY;
+  uint8_t registerA;
+  uint8_t registerB;
+  uint8_t registerC;
+  uint8_t registerX;
+  uint8_t registerY;
   FlagRegister flags;
   uint16_t programCounter;
   uint16_t stackPointer;

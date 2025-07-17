@@ -93,6 +93,59 @@ bool ifMatch(char n, std::string key) {
 	return (key.find(n) != std::string::npos);
 }
 
+void split(const std::string& n, std::vector<std::string>& th) {
+
+  bool inString = false;
+  bool escape = false;
+  std::string cw;
+  for(auto x : n) {
+    switch(x) {
+    case ' ':
+      if(inString) {
+      	cw += x;
+      } else {
+        if(!cw.empty()) {
+          th.push_back(cw);
+          cw.clear();
+        }
+      }
+      break;
+    case '"':
+      if(escape) {
+        escape = false;
+        cw += '"';
+      }
+      if(inString) {
+        inString = false;
+        cw += '"';
+        th.push_back(cw);
+        cw.clear();
+      } else {
+        if(cw.empty()) {
+          inString = true;
+          cw += '"';
+        }
+      }
+      break;
+    case '\\':
+      if(escape) {
+        cw += '\\';
+      }
+      escape = !escape;
+      break;
+
+    default:
+      if(escape) {
+        escape = !escape;
+      }
+      cw += x;
+    }
+  }
+  if(!cw.empty()) {
+    th.push_back(cw);
+  }
+}
+
 void parse(const std::string& n, std::vector<std::string>& th, std::string key) {
   //each entry is a string delimited by a character in key, similar to bk but more general
   std::string cw;

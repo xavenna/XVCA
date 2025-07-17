@@ -26,6 +26,16 @@ int CPU::fetchInsToPCB() {
 
 
 int CPU::executeInstruction() {
+  /*
+  debug << "Ins: ";
+  for(int i=0;i<registers.PCBPos;i++) {
+    debug << std::to_string(registers.PCB[i]) << ",";
+  }
+  debug << "PC:" << registers.programCounter;
+  debug << "X:" << (+registers.registerX&0xff) << ",Y:" << (+registers.registerY&0xff)<< "\n";
+
+  */
+  
   uint16_t address = 0;
   char temp8 = 0;
   switch(registers.PCB[0]) {
@@ -243,6 +253,11 @@ int CPU::executeInstruction() {
   case 0x1e:
     //MVYI
     memory.write(registers.XY(), registers.registerY);
+    break;
+  case 0x1f:
+    //MIXY
+    registers.registerX = registers.PCB[1];
+    registers.registerY = registers.PCB[2];
     break;
 
     //////////////////////
@@ -596,26 +611,27 @@ int CPU::executeInstruction() {
     default:
       throw std::invalid_argument("Invalid argument to instruction.");
     }
-    registers.flags.equal = (temp8 == registers.registerA);
+    temp8 = registers.registerA - temp8;
     registers.flags.greater = (temp8 > registers.registerA);
-    registers.flags.sign = (registers.registerA-temp8) & 0x80;
-    registers.flags.greater = (temp8 > 0);
+    registers.flags.sign = (temp8) & 0x80;
+    registers.flags.zero = (temp8 == 0);
+    registers.flags.equal = (temp8 == 0);
     break;
   case 0x5d:
     //CMPV <v>
     temp8 = registers.PCB[1];
-    registers.flags.equal = (temp8 == registers.registerA);
     registers.flags.greater = (temp8 > registers.registerA);
     registers.flags.sign = (registers.registerA-temp8) & 0x80;
-    registers.flags.greater = (temp8 > 0);
+    registers.flags.zero = (temp8 == 0);
+    registers.flags.equal = (temp8 == 0);
     break;
   case 0x5e:
     //CMPI
     temp8 = memory.read(registers.XY());
-    registers.flags.equal = (temp8 == registers.registerA);
+    registers.flags.zero = (temp8 == 0);
+    registers.flags.equal = (temp8 == 0);
     registers.flags.greater = (temp8 > registers.registerA);
     registers.flags.sign = (registers.registerA-temp8) & 0x80;
-    registers.flags.greater = (temp8 > 0);
     break;
 
     //////////////////////////
@@ -1006,6 +1022,7 @@ bool CPU::pcbIsValidIns() {
     case 0x17:
     case 0x18:
     case 0x19:
+    case 0x1f:
     case 0x40:
     case 0x41:
     case 0x42:
@@ -1022,6 +1039,6 @@ bool CPU::pcbIsValidIns() {
 }
 
 
-CPU::CPU(AdapterGroup& ad) : memory{ad.driveAdapter.driveBuf, ad.displayAdapter.displayBuf, ad.keyboardAdapter.keyboardBuffer, ad.driveAdapter.drcBuf, ad.shutdownBuf} {
+CPU::CPU(AdapterGroup& ad) : memory{ad.driveAdapter.driveBuf, ad.displayAdapter.displayBuf, ad.keyboardAdapter.keyboardBuffer, ad.driveAdapter.drcBuf, ad.shutdownBuf}, debug{"ins.log"} {
 
 }

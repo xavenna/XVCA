@@ -6,7 +6,7 @@
 #include <limits>
 #include <sstream>
 
-//void sSplit(std::string, std::vector<std::string>&, std::string);
+void split(const std::string& n, std::vector<std::string>& th);
 bool isLetter(char);
 bool isNum(char);
 bool isNum(const std::string& st);

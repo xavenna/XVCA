@@ -2,6 +2,7 @@
 #define CPU_H
 
 #include <stdexcept>
+#include <fstream>
 
 #include "memory-group.h"
 #include "register-group.h"
@@ -20,6 +21,7 @@ public:
   
 private:
   char regNum(int);
+  std::ofstream debug;
   //std::string instructionName();
 };
 
