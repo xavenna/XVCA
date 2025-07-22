@@ -1,7 +1,7 @@
 #include "memory-group.h"
 #include <iostream>
 
-void MemoryGroup::write(uint16_t address, const char data) {
+void MemoryGroup::write(uint16_t address, const uint8_t data) {
   //std::cerr << "Writing 0x"<<std::hex<<+(data & 0xff)<<" to address 0x"<<address<<std::dec<<"\n";
   if(address < 0xf400) {
     primaryMemory[address] = data;
@@ -30,7 +30,7 @@ void MemoryGroup::write(uint16_t address, const char data) {
     //does nothing, as it is unmapped MMIO
   }
 }
-char MemoryGroup::read(uint16_t address) const {
+uint8_t MemoryGroup::read(uint16_t address) const {
   //std::cerr << "Reading from address 0x"<<std::hex<<address<<std::dec<<"\n";
   char temp;
   if(address < 0xf400) {
@@ -73,7 +73,7 @@ bool MemoryGroup::readBlock(uint16_t addr, char* buffer, unsigned len) const {
 
 bool MemoryGroup::writeBlock(uint16_t addr, const char* buffer, unsigned len) {
   for(unsigned i=0;i<len;i++) {
-    write(addr+i, buffer[i]);
+    write(addr+i, static_cast<uint8_t>(buffer[i]));
   }
   return true; //can return false if fail
 }

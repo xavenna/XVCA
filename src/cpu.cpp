@@ -26,15 +26,15 @@ int CPU::fetchInsToPCB() {
 
 
 int CPU::executeInstruction() {
-  /*
-  debug << "Ins: ";
+  debug << "Ins: " << std::hex;
   for(int i=0;i<registers.PCBPos;i++) {
-    debug << std::to_string(registers.PCB[i]) << ",";
+    debug << (+registers.PCB[i] & 0xff) << ",";
   }
-  debug << "PC:" << registers.programCounter;
+  debug << "PC:" << registers.programCounter<<";";
+  debug << "SP:" << registers.stackPointer << ";";
+  debug << "; A:"<< (+registers.programCounter & 0xff) << "; ";
   debug << "X:" << (+registers.registerX&0xff) << ",Y:" << (+registers.registerY&0xff)<< "\n";
 
-  */
   
   uint16_t address = 0;
   char temp8 = 0;
@@ -259,6 +259,16 @@ int CPU::executeInstruction() {
     registers.registerX = registers.PCB[1];
     registers.registerY = registers.PCB[2];
     break;
+  case 0x20:
+    //MSXY
+    registers.registerX = (registers.stackPointer & 0xff00) >> 8;
+    registers.registerY = registers.stackPointer & 0xff;
+    break;
+  case 0x21:
+    //MXYS
+    registers.stackPointer = (registers.registerX << 8) | registers.registerY;
+
+    break;
 
     //////////////////////
     //  STACK OPERATIONS
@@ -388,6 +398,7 @@ int CPU::executeInstruction() {
   case 0x45:
     //CALL <a>
     //push programCounter to stack
+    std::cerr << std::hex << registers.programCounter << "\n";
     registers.programCounter++;
     registers.stackPointer--;
     memory.write(registers.stackPointer, (registers.programCounter >> 8) & 0xff);
@@ -402,6 +413,7 @@ int CPU::executeInstruction() {
     registers.programCounter = memory.read(registers.stackPointer) << 8;
     registers.stackPointer++;
     registers.programCounter = registers.stackPointer | memory.read(registers.stackPointer);
+    std::cerr << std::hex << registers.stackPointer << "\n";
     registers.stackPointer++;
     break;
 
@@ -622,14 +634,14 @@ int CPU::executeInstruction() {
     temp8 = registers.PCB[1];
     registers.flags.greater = (temp8 > registers.registerA);
     registers.flags.sign = (registers.registerA-temp8) & 0x80;
-    registers.flags.zero = (temp8 == 0);
-    registers.flags.equal = (temp8 == 0);
+    registers.flags.zero = (temp8 == registers.registerA);
+    registers.flags.equal = (temp8 == registers.registerA);
     break;
   case 0x5e:
     //CMPI
     temp8 = memory.read(registers.XY());
-    registers.flags.zero = (temp8 == 0);
-    registers.flags.equal = (temp8 == 0);
+    registers.flags.zero = (temp8 == registers.registerA);
+    registers.flags.equal = (temp8 == registers.registerA);
     registers.flags.greater = (temp8 > registers.registerA);
     registers.flags.sign = (registers.registerA-temp8) & 0x80;
     break;
@@ -940,6 +952,8 @@ bool CPU::pcbIsValidIns() {
     case 0x1c:
     case 0x1d:
     case 0x1e:
+    case 0x20:
+    case 0x21:
     case 0x30:
     case 0x31:
     case 0x32:
@@ -961,10 +975,13 @@ bool CPU::pcbIsValidIns() {
     case 0x55:
     case 0x5a:
     case 0x5b:
+    case 0x5e:
     case 0x72:
     case 0x75:
     case 0x78:
     case 0x7b:
+    case 0xa0:
+    case 0xa1:
     case 0xff:
       return true;
     default:
@@ -1005,6 +1022,8 @@ bool CPU::pcbIsValidIns() {
     case 0x82:
     case 0x84:
     case 0x86:
+    case 0x89:
+    case 0x8a:
       return true;
     default:
       return false;

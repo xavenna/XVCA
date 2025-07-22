@@ -1,8 +1,15 @@
 #ifndef ASSEMBLER_UTIL_H
 #define ASSEMBLER_UTIL_H
+#include "util.h"
 #include <vector>
 #include <string>
 #include <map>
+#include <iostream>
+#include <fstream>
+#include <cstring>
+#include <cstdint>
+#include <deque>
+#include <list>
 
 struct forEntry {
   unsigned line;

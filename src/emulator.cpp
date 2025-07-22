@@ -27,6 +27,7 @@ int Emulator::runCycle() {
       case -1:
         //halt, do nothing until an interrupt is detected?
         //Display some diagnostic information
+        /*
         std::cerr << std::hex<<std::setfill('0');
         std::cerr << "PC:"<<std::setw(4)<<cpu.registers.programCounter << '\n';
         std::cerr << "SP:"<<std::setw(4)<<cpu.registers.stackPointer << '\n';
@@ -36,6 +37,7 @@ int Emulator::runCycle() {
         std::cerr << "X:"<<std::setw(2)<<(+cpu.registers.registerX & 0xff) << '\n';
         std::cerr << "Y:"<<std::setw(2)<<(+cpu.registers.registerY & 0xff) << '\n';
         std::cerr << std::dec;
+        */
         cpu.registers.clearPCB();
         return 2;
       default:
@@ -140,9 +142,9 @@ int Emulator::updateHardware() {
   //check for drive calls
   
   //if I want this emulator to get any kind of reasonable performance, this needs to be optimized. (maybe use threads)
-  if(!cpu.halted) {
+  //if(!cpu.halted) {
     adapterGroup.displayAdapter.updateDisplay();
-  }
+  //}
   int interrupt = 0;
   interrupt = adapterGroup.keyboardAdapter.updateBuffer();
 

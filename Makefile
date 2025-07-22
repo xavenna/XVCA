@@ -29,7 +29,7 @@ df = $(OBJ_DIR)/$(*F)
 AUTODEPS:=$(patsubst src/%.cpp, $(OBJ_DIR)/%.d, $(SRCS))
 OBJS:=$(patsubst src/%.cpp, $(OBJ_DIR)/%.o, $(SRCS))
 
-ASMOBJS := $(addprefix $(OBJ_DIR)/,assembler.o util.o assembler-util.o file-utils.o)
+ASMOBJS := $(addprefix $(OBJ_DIR)/,assembler.o util.o assembler-util.o file-utils.o asm2machine.o)
 
 XVOBJS = $(addprefix $(OBJ_DIR)/,emulator.o xvca.o util.o cpu.o register-group.o display-adapter.o file-utils.o emulate-loop.o drive.o memory-group.o flags.o keyboard-adapter.o drive-adapter.o adapter-group.o disassemble.o)
 

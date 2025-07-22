@@ -61,6 +61,8 @@ some way to move a memory address to a register
 | 1D  | MVXI     | Move the value stored in XY to X |
 | 1E  | MVYI     | Move the value stored in XY to Y |
 | 1F  | MIXY <a> | Move the address pointer to XY   |
+| 20  | MSXY     | Move stack pointer to XY |
+| 21  | MXYS     | Move XY to stack pointer
 
 ### Stack Instructions
 

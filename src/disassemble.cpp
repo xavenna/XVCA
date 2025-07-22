@@ -78,6 +78,8 @@ bool pcbIsValidIns(std::array<uint8_t,4> pcb, uint8_t pos) {
     case 0x1c:
     case 0x1d:
     case 0x1e:
+    case 0x20:
+    case 0x21:
     case 0x30:
     case 0x31:
     case 0x32:
@@ -246,6 +248,12 @@ void instructionName(std::array<uint8_t,4> pcb, uint8_t pos) {
   case 0x1f:
     std::cout << "MIXY ";
     std::cout << std::setw(2) << +(pcb[1]) << std::setw(2) << +pcb[2];
+    break;
+  case 0x20:
+    std::cout << "MSXY";
+    break;
+  case 0x21:
+    std::cout << "MXYS";
     break;
 
     //////////////////////
